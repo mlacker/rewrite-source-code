@@ -2,6 +2,7 @@ package com.mlacker.samples.beans.factory.support
 
 import com.mlacker.samples.beans.factory.config.BeanDefinition
 import com.mlacker.samples.beans.factory.config.ConfigurableBeanFactory
+import org.springframework.beans.factory.support.AbstractBeanDefinition.AUTOWIRE_NO
 import kotlin.reflect.KClass
 
 abstract class AbstractBeanDefinition() : BeanDefinition, Cloneable {
@@ -29,6 +30,8 @@ abstract class AbstractBeanDefinition() : BeanDefinition, Cloneable {
     override fun clone(): Any {
         return cloneBeanDefinition()
     }
+
+    var autowireMode: Int = AUTOWIRE_NO
 
     abstract fun cloneBeanDefinition(): AbstractBeanDefinition
 }

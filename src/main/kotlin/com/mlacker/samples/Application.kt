@@ -19,6 +19,12 @@ class BeanA
 @Component
 class BeanB
 
+@Component
+class BeanC(
+        beanA: BeanA,
+        beanB: BeanB
+)
+
 fun main(args: Array<String>) {
     val log = LogFactory.getLog(Application::class.java)
     val applicationContext = AnnotationConfigApplicationContext(Application::class.java)
@@ -27,5 +33,5 @@ fun main(args: Array<String>) {
     val beanB = applicationContext.getBean(BeanB::class.java)
 
     log.info(beanA)
-    log.info(beanB)
+    log.debug(beanB)
 }

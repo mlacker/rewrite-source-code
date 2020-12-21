@@ -1,6 +1,7 @@
 package com.mlacker.samples.beans.factory.config
 
 import com.mlacker.samples.beans.factory.BeanFactory
+import org.springframework.beans.factory.config.DependencyDescriptor
 
 interface AutowireCapableBeanFactory : BeanFactory {
 
@@ -11,4 +12,7 @@ interface AutowireCapableBeanFactory : BeanFactory {
     fun applyBeanPostProcessorsAfterInitialization(existingBean: Any, beanName: String): Any
 
     fun destroyBean(existingBean: Any)
+
+    fun resolveDependency(descriptor: DependencyDescriptor, requestingBeanName: String,
+                          autowiredBeanNames: MutableSet<String>): Any?
 }

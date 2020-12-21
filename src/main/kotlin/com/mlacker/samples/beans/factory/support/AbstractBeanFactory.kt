@@ -4,6 +4,7 @@ import com.mlacker.samples.beans.factory.ObjectFactory
 import com.mlacker.samples.beans.factory.config.BeanDefinition
 import com.mlacker.samples.beans.factory.config.BeanPostProcessor
 import com.mlacker.samples.beans.factory.config.ConfigurableBeanFactory
+import com.mlacker.samples.beans.factory.config.InstantiationAwareBeanPostProcessor
 import org.springframework.beans.BeansException
 import org.springframework.beans.factory.BeanCurrentlyInCreationException
 import org.springframework.beans.factory.BeanNotOfRequiredTypeException
@@ -19,6 +20,9 @@ abstract class AbstractBeanFactory : DefaultSingletonBeanRegistry(), Configurabl
     override var beanClassLoader: ClassLoader? = ClassUtils.getDefaultClassLoader()
 
     val beanPostProcessors: MutableList<BeanPostProcessor> = CopyOnWriteArrayList()
+
+    @Volatile
+    protected var hasInstantiationAwareBeanPostProcessors = false
 
     private val mergedBeanDefinitions: MutableMap<String, RootBeanDefinition> = ConcurrentHashMap(256)
 
@@ -99,6 +103,10 @@ abstract class AbstractBeanFactory : DefaultSingletonBeanRegistry(), Configurabl
 
     override fun isPrototype(name: String) = getMergedLocalBeanDefinition(name).isPrototype
 
+    override fun getType(name: String): KClass<*> {
+        TODO("Not yet implemented")
+    }
+
     //---------------------------------------------------------------------
     // Implementation of ConfigurableBeanFactory interface
     //---------------------------------------------------------------------
@@ -106,6 +114,9 @@ abstract class AbstractBeanFactory : DefaultSingletonBeanRegistry(), Configurabl
 
     override fun addBeanPostProcessor(beanPostProcessor: BeanPostProcessor) {
         this.beanPostProcessors.remove(beanPostProcessor)
+        if (beanPostProcessor is InstantiationAwareBeanPostProcessor) {
+            this.hasInstantiationAwareBeanPostProcessors = true
+        }
         this.beanPostProcessors.add(beanPostProcessor)
     }
 

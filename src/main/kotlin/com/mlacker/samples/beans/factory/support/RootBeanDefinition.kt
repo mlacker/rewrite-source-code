@@ -9,6 +9,9 @@ class RootBeanDefinition constructor() : AbstractBeanDefinition() {
     constructor(original: RootBeanDefinition) : this()
 
     @Volatile
+    internal var beforeInstantiationResolved: Boolean? = null
+
+    @Volatile
     internal var stale: Boolean = false
 
     override fun cloneBeanDefinition(): RootBeanDefinition = RootBeanDefinition(this)

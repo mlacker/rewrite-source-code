@@ -3,7 +3,7 @@ package com.mlacker.samples.beans.factory.support
 import com.mlacker.samples.beans.NoSuchBeanException
 import com.mlacker.samples.beans.factory.ObjectFactory
 import com.mlacker.samples.beans.factory.config.SingletonBeanRegistry
- import org.slf4j.Logger
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanCreationException
 import org.springframework.beans.factory.BeanCreationNotAllowedException
@@ -36,7 +36,7 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
 
     private var singletonsCurrentlyInDestruction = false
 
-    protected val logger: Logger = LoggerFactory.getLogger(javaClass)
+    val logger: Logger = LoggerFactory.getLogger(javaClass)
 
     override fun registerSingleton(beanName: String, singletonObject: Any) {
         synchronized(this.singletonObjects) {
@@ -184,6 +184,10 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
     protected fun afterSingletonCreation(beanName: String) {
         if (!this.inCreationCheckExclusions.contains(beanName) && !this.singletonsCurrentlyInCreation.remove(beanName))
             throw IllegalStateException("Singleton '$beanName' isn't currently in creation")
+    }
+
+    fun registerDependentBean(beanName: String, dependentBeanName: String) {
+        TODO("Not yet implemented")
     }
 
     protected fun clearSingletonCache() {

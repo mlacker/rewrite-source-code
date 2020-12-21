@@ -15,4 +15,6 @@ interface BeanFactory {
     fun isSingleton(name: String): Boolean
 
     fun isPrototype(name: String): Boolean
+
+    fun getType(name: String): KClass<*>
 }
