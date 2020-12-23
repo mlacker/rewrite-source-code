@@ -17,8 +17,6 @@ interface ConfigurableBeanFactory : BeanFactory, SingletonBeanRegistry {
 
     fun getMergedBeanDefinition(beanName: String): BeanDefinition
 
-    fun isFactoryBean(name: String): Boolean
-
     fun setCurrentlyInCreation(beanName: String, inCreation: Boolean)
 
     fun isCurrentlyInCreation(beanName: String): Boolean

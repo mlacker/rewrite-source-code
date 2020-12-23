@@ -8,10 +8,12 @@ import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.BeanCreationException
 import org.springframework.beans.factory.BeanCreationNotAllowedException
 import org.springframework.beans.factory.BeanCurrentlyInCreationException
+import org.springframework.beans.factory.DisposableBean
 import org.springframework.util.StringUtils
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashMap
 import kotlin.collections.LinkedHashSet
 
 open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
@@ -35,6 +37,8 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
     private var suppressedExceptions: MutableSet<Exception>? = null
 
     private var singletonsCurrentlyInDestruction = false
+
+    private val disposableBeans: MutableMap<String, DisposableBean> = LinkedHashMap()
 
     val logger: Logger = LoggerFactory.getLogger(javaClass)
 
@@ -172,7 +176,7 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
     fun isCurrentlyInCreation(beanName: String) =
             (!this.inCreationCheckExclusions.contains(beanName) && isActuallyInCreation(beanName))
 
-    protected fun isActuallyInCreation(beanName: String) = isSingletonCurrentlyInCreation(beanName)
+    protected open fun isActuallyInCreation(beanName: String) = isSingletonCurrentlyInCreation(beanName)
 
     fun isSingletonCurrentlyInCreation(beanName: String) = this.singletonsCurrentlyInCreation.contains(beanName)
 
@@ -186,8 +190,44 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
             throw IllegalStateException("Singleton '$beanName' isn't currently in creation")
     }
 
+    fun registerDisposableBean(beanName: String, bean: DisposableBean) {
+        synchronized(this.disposableBeans) {
+            this.disposableBeans[beanName] = bean
+        }
+    }
+
     fun registerDependentBean(beanName: String, dependentBeanName: String) {
         TODO("Not yet implemented")
+    }
+
+    protected fun hasDependentBean(beanName: String): Boolean {
+        TODO("Not yet implemented")
+    }
+
+    fun getDependentBeans(beanName: String): Array<String> {
+        TODO("Not yet implemented")
+    }
+
+    fun getDependenciesForBean(beanName: String): Array<String> {
+        TODO("Not yet implemented")
+    }
+
+    open fun destroySingletons() {
+        logger.trace("Destroying singletons in $this")
+
+        synchronized(this.singletonObjects) {
+            this.singletonsCurrentlyInDestruction = true
+        }
+
+        val disposableBeanNames: Array<String>
+        synchronized(this.disposableBeans) {
+            disposableBeanNames = this.disposableBeans.keys.toTypedArray()
+        }
+        for (i in disposableBeanNames.size - 1 downTo 0) {
+            destroySingleton(disposableBeanNames[i])
+        }
+
+        clearSingletonCache()
     }
 
     protected fun clearSingletonCache() {
@@ -200,8 +240,17 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
         }
     }
 
-    fun destroySingle(beanName: String) {
+    open fun destroySingleton(beanName: String) {
         removeSingleton(beanName)
+
+        val disposableBean: DisposableBean?
+        synchronized(this.disposableBeans) {
+            disposableBean = this.disposableBeans.remove(beanName)
+        }
+        destroyBean(beanName, disposableBean)
+    }
+
+    protected fun destroyBean(beanName: String, bean: DisposableBean?) {
         TODO("Not yet implemented")
     }
 

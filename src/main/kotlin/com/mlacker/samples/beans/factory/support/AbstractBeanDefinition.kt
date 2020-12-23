@@ -27,6 +27,10 @@ abstract class AbstractBeanDefinition() : BeanDefinition, Cloneable {
     override val isPrototype: Boolean
         get() = ConfigurableBeanFactory.SCOPE_PROTOTYPE == this.scope
 
+    fun validate() {
+
+    }
+
     override fun clone(): Any {
         return cloneBeanDefinition()
     }
