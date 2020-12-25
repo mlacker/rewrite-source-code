@@ -122,7 +122,14 @@ abstract class AbstractBeanFactory : DefaultSingletonBeanRegistry(), Configurabl
 
     // 664
     override fun getType(name: String): KClass<*> {
-        TODO("Not yet implemented")
+        try {
+            val beanInstance = getSingleton(name)
+            return beanInstance::class
+        } catch (ex: NoSuchBeanException) {
+        }
+
+        val mbd = getMergedLocalBeanDefinition(name)
+        return mbd.beanClass!!
     }
 
     //---------------------------------------------------------------------

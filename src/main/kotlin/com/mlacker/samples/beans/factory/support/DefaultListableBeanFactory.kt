@@ -1,9 +1,11 @@
 package com.mlacker.samples.beans.factory.support
 
+import com.mlacker.samples.beans.NoSuchBeanException
 import com.mlacker.samples.beans.factory.config.BeanDefinition
 import com.mlacker.samples.beans.factory.config.ConfigurableListableBeanFactory
 import org.springframework.beans.factory.BeanNotOfRequiredTypeException
 import org.springframework.beans.factory.NoSuchBeanDefinitionException
+import org.springframework.beans.factory.config.BeanDefinitionHolder
 import org.springframework.beans.factory.config.DependencyDescriptor
 import org.springframework.beans.factory.config.NamedBeanHolder
 import org.springframework.beans.factory.support.AutowireCandidateResolver
@@ -46,11 +48,6 @@ class DefaultListableBeanFactory : AbstractAutowireCapableBeanFactory(),
     private fun <T : Any> resolveBean(requiredType: ResolvableType): T =
             resolveNamedBean<T>(requiredType).beanInstance
 
-    // 1155
-    private fun <T> resolveNamedBean(requiredType: ResolvableType): NamedBeanHolder<T> {
-        TODO("Not yet implemented")
-    }
-
     //---------------------------------------------------------------------
     // Implementation of ListableBeanFactory interface
     //---------------------------------------------------------------------
@@ -66,12 +63,59 @@ class DefaultListableBeanFactory : AbstractAutowireCapableBeanFactory(),
             if (this.frozenBeanDefinitionNames != null) this.frozenBeanDefinitionNames!!.clone()
             else this.beanDefinitionNames.toTypedArray()
 
-    override fun getBeanNamesForType(type: ResolvableType, includeNonSingletons: Boolean, allowEagerInit: Boolean): Array<String> {
-        TODO("Not yet implemented")
+    // 477
+    override fun getBeanNamesForType(type: ResolvableType, includeNonSingletons: Boolean, allowEagerInit: Boolean): Array<String> =
+            doGetBeanNamesForType(type, includeNonSingletons, allowEagerInit)
+
+    // 493
+    override fun getBeanNamesForType(type: Class<*>, includeNonSingletons: Boolean, allowEagerInit: Boolean): Array<String> =
+            doGetBeanNamesForType(ResolvableType.forRawClass(type), includeNonSingletons, allowEagerInit)
+
+    // 510
+    private fun doGetBeanNamesForType(type: ResolvableType, includeNonSingletons: Boolean, allowEagerInit: Boolean): Array<String> {
+        val result = mutableListOf<String>()
+
+        for (beanName in this.beanDefinitionNames) {
+            try {
+                val mbd = getMergedLocalBeanDefinition(beanName)
+
+                if (allowEagerInit || (mbd.beanClass != null || !mbd.isLazyInit)) {
+                    var matchFound = false
+                    if (includeNonSingletons || isSingleton(beanName)) {
+                        matchFound = isTypeMatch(beanName, type)
+                    }
+                    if (matchFound) {
+                        result.add(beanName)
+                    }
+                }
+            } catch (ex: NoSuchBeanDefinitionException) {
+            }
+        }
+
+        return result.toTypedArray()
     }
 
-    override fun getBeanNamesForType(type: KClass<*>, includeNonSingletons: Boolean, allowEagerInit: Boolean): Array<String> {
-        TODO("Not yet implemented")
+    // 516
+    private fun isTypeMatch(name: String, typeToMatch: ResolvableType): Boolean {
+        try {
+            val beanInstance = getSingleton(name, false)
+            if (beanInstance !is NullBean) {
+                if (typeToMatch.isInstance(beanInstance)) {
+                    return true
+                }
+
+                return false
+            }
+        } catch (ex: NoSuchBeanException) {
+        }
+
+        if (containsSingleton(name) && !containsBeanDefinition(name)) {
+            return false
+        }
+
+        val mbd = getMergedLocalBeanDefinition(name)
+
+        return typeToMatch.isAssignableFrom(mbd.beanClass!!.java)
     }
 
     //---------------------------------------------------------------------
@@ -93,8 +137,19 @@ class DefaultListableBeanFactory : AbstractAutowireCapableBeanFactory(),
 
     // 759
     protected fun isAutowireCandidate(beanName: String,
+            descriptor: DependencyDescriptor, resolver: AutowireCandidateResolver): Boolean =
+            if (containsBeanDefinition(beanName)) {
+                isAutowireCandidate(beanName, getMergedLocalBeanDefinition(beanName), descriptor, resolver)
+            } else if (containsSingleton(beanName)) {
+                isAutowireCandidate(beanName, RootBeanDefinition(getType(beanName)), descriptor, resolver)
+            } else {
+                true
+            }
+
+    // 794
+    protected fun isAutowireCandidate(beanName: String, mbd: RootBeanDefinition,
             descriptor: DependencyDescriptor, resolver: AutowireCandidateResolver): Boolean {
-        TODO("Not yet implemented")
+        return mbd.isAutowireCandidate
     }
 
     // 810
@@ -160,7 +215,7 @@ class DefaultListableBeanFactory : AbstractAutowireCapableBeanFactory(),
 
     // 1001
     override fun removeBeanDefinition(beanName: String) {
-        val bd = this.beanDefinitionMap.remove(beanName) ?: throw NoSuchBeanDefinitionException(beanName)
+        this.beanDefinitionMap.remove(beanName) ?: throw NoSuchBeanDefinitionException(beanName)
 
         this.beanDefinitionNames.remove(beanName)
         this.frozenBeanDefinitionNames = null
@@ -203,6 +258,18 @@ class DefaultListableBeanFactory : AbstractAutowireCapableBeanFactory(),
     //---------------------------------------------------------------------
     // Dependency resolution functionality
     //---------------------------------------------------------------------
+
+    // 1155
+    private fun <T> resolveNamedBean(requiredType: ResolvableType): NamedBeanHolder<T> {
+        val candidateNames = getBeanNamesForType(requiredType)
+
+        if (candidateNames.isNotEmpty()) {
+            val beanName = candidateNames[0]
+            return NamedBeanHolder(beanName, getBean(beanName, requiredType.toClass().kotlin) as T)
+        } else {
+            throw NoSuchBeanException(requiredType)
+        }
+    }
 
     // 1209
     override fun resolveDependency(descriptor: DependencyDescriptor, requestingBeanName: String,
@@ -254,15 +321,23 @@ class DefaultListableBeanFactory : AbstractAutowireCapableBeanFactory(),
     // 1470
     protected fun findAutowireCandidates(beanName: String, type: Class<*>, descriptor: DependencyDescriptor)
             : Map<String, Any?> {
+        val candidateNames = getBeanNamesForType(type, true, descriptor.isEager)
         val candidates = LinkedHashMap<String, Any?>()
 
-        if (containsSingleton(beanName)) {
-            val beanInstance = this.getBean(beanName)
-            candidates[beanName] = if (beanInstance is NullBean) null else beanInstance
-        } else {
-            candidates[beanName] = getType(beanName)
+        for (candidate in candidateNames) {
+            if (!isSelfReference(beanName, candidate) && isAutowireCandidate(candidate, descriptor)) {
+                if (containsSingleton(beanName)) {
+                    val beanInstance = this.getBean(candidate)
+                    candidates[candidate] = if (beanInstance is NullBean) null else beanInstance
+                } else {
+                    candidates[candidate] = getType(candidate)
+                }
+            }
         }
 
         return candidates
     }
+
+    // 1700
+    private fun isSelfReference(beanName: String, candidate: String) = beanName == candidate
 }

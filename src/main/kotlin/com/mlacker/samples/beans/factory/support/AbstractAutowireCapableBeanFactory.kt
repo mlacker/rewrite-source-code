@@ -1,5 +1,6 @@
 package com.mlacker.samples.beans.factory.support
 
+import com.mlacker.samples.beans.NoSuchBeanException
 import com.mlacker.samples.beans.factory.BeanFactoryAware
 import com.mlacker.samples.beans.factory.ObjectFactory
 import com.mlacker.samples.beans.factory.config.AutowireCapableBeanFactory
@@ -73,10 +74,6 @@ abstract class AbstractAutowireCapableBeanFactory : AbstractBeanFactory(), Autow
     protected fun doCreateBean(beanName: String, mbd: RootBeanDefinition): Any {
         val instanceWrapper: BeanWrapper = createBeanInstance(beanName, mbd)
         val bean = instanceWrapper.wrappedInstance
-        val beanType = instanceWrapper.wrappedClass.kotlin
-        if (beanType != NullBean::class) {
-            // mbd.resolvedTargetType = beanType
-        }
 
         val earlySingletonExposure = (mbd.isSingleton && this.allowCircularReferences && isSingletonCurrentlyInCreation(beanName))
         if (earlySingletonExposure) {
@@ -100,11 +97,12 @@ abstract class AbstractAutowireCapableBeanFactory : AbstractBeanFactory(), Autow
         }
 
         if (earlySingletonExposure) {
-            val earlySingletonReference = getSingleton(beanName, false)
-            if (earlySingletonReference != null) {
+            try {
+                val earlySingletonReference = getSingleton(beanName, false)
                 if (exposedObject == bean) {
                     exposedObject = earlySingletonReference
                 }
+            } catch (ex: NoSuchBeanException) {
             }
         }
 
@@ -168,13 +166,14 @@ abstract class AbstractAutowireCapableBeanFactory : AbstractBeanFactory(), Autow
                 }
             }
         }
-        return null
+        // TODO: return null
+        return beanClass?.primaryConstructor?.let { listOf(it) }
     }
 
     // 1301
     protected fun instantiateBean(beanName: String, mbd: RootBeanDefinition): BeanWrapper {
         try {
-            val primaryConstructor = mbd.beanClass!!.primaryConstructor!!
+            val primaryConstructor = mbd.beanClass!!.constructors.first()
             val beanInstance: Any = primaryConstructor.call()
             return BeanWrapperImpl(beanInstance)
         } catch (ex: Throwable) {
@@ -238,15 +237,9 @@ abstract class AbstractAutowireCapableBeanFactory : AbstractBeanFactory(), Autow
 
     // 1836
     private fun invokeInitMethods(beanName: String, bean: Any, mbd: RootBeanDefinition?) {
-        val isInitializingBean = bean is InitializingBean
         if (bean is InitializingBean) {
             logger.trace("Invoking afterPropertiesSet() on bean with name '$beanName'")
             bean.afterPropertiesSet()
-        }
-
-        if (mbd != null && bean::class != NullBean::class) {
-            // val initMethodName = mbd.initMethodName
-            TODO()
         }
     }
 }

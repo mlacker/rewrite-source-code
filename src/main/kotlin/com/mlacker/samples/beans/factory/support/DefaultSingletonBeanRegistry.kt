@@ -40,6 +40,10 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
 
     private val disposableBeans: MutableMap<String, DisposableBean> = LinkedHashMap()
 
+    private val dependentBeanMap: MutableMap<String, MutableSet<String>> = ConcurrentHashMap(64)
+
+    private val dependenciesForBeanMap: MutableMap<String, MutableSet<String>> = ConcurrentHashMap(64)
+
     val logger: Logger = LoggerFactory.getLogger(javaClass)
 
     override fun registerSingleton(beanName: String, singletonObject: Any) {
@@ -197,20 +201,27 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
     }
 
     fun registerDependentBean(beanName: String, dependentBeanName: String) {
-        TODO("Not yet implemented")
+        synchronized(this.dependentBeanMap) {
+            val dependentBeans = this.dependentBeanMap.computeIfAbsent(beanName) { LinkedHashSet(8) }
+            if (!dependentBeans.add(dependentBeanName)) {
+                return
+            }
+        }
+
+        synchronized(this.dependenciesForBeanMap) {
+            this.dependenciesForBeanMap
+                    .computeIfAbsent(dependentBeanName) { LinkedHashSet(8) }
+                    .add(beanName)
+        }
     }
 
-    protected fun hasDependentBean(beanName: String): Boolean {
-        TODO("Not yet implemented")
-    }
+    protected fun hasDependentBean(beanName: String) = this.dependentBeanMap.containsKey(beanName)
 
-    fun getDependentBeans(beanName: String): Array<String> {
-        TODO("Not yet implemented")
-    }
+    fun getDependentBeans(beanName: String) =
+            this.dependentBeanMap[beanName]?.toTypedArray() ?: emptyArray()
 
-    fun getDependenciesForBean(beanName: String): Array<String> {
-        TODO("Not yet implemented")
-    }
+    fun getDependenciesForBean(beanName: String): Array<String> =
+            this.dependenciesForBeanMap[beanName]?.toTypedArray() ?: emptyArray()
 
     open fun destroySingletons() {
         logger.trace("Destroying singletons in $this")
@@ -251,7 +262,7 @@ open class DefaultSingletonBeanRegistry : SingletonBeanRegistry {
     }
 
     protected fun destroyBean(beanName: String, bean: DisposableBean?) {
-        TODO("Not yet implemented")
+        // TODO("Not yet implemented")
     }
 
     override fun getSingletonMutex() = this.singletonObjects

@@ -26,7 +26,7 @@ class ConstructorResolver(val beanFactory: AbstractAutowireCapableBeanFactory) {
         val bw = BeanWrapperImpl()
 
         val constructorToUse: KFunction<*> = mbd.beanClass!!.primaryConstructor!!
-        val argsToUse: Array<Any>
+        val argsToUse: Array<Any?>
 
         if (constructorToUse.parameters.isEmpty()) {
             bw.setBeanInstance(instantiate(beanName, mbd, constructorToUse, EMPTY_ARGS))
@@ -42,12 +42,11 @@ class ConstructorResolver(val beanFactory: AbstractAutowireCapableBeanFactory) {
             val argsHolder = createArgumentArray(beanName, mbd, null, bw, paramTypes, paramNames,
                     getUserDeclaredConstructor(constructorToUse), autowiring, true)
 
-            argsToUse = argsHolder.arguments as Array<Any>
+            argsToUse = argsHolder.arguments
         } catch (ex: UnsatisfiedDependencyException) {
             throw BeanCreationException(beanName, "Cloud not resolve matching constructor", ex)
         }
 
-        Assert.state(argsToUse != null, "Unresolved constructor arguments")
         bw.setBeanInstance(instantiate(beanName, mbd, constructorToUse, argsToUse))
         return bw
     }
@@ -59,11 +58,11 @@ class ConstructorResolver(val beanFactory: AbstractAutowireCapableBeanFactory) {
         val args = ArgumentsHolder(paramTypes.size)
         val autowiredBeanNames = LinkedHashSet<String>(4)
 
-        for (paramIndex in 0..paramTypes.size) {
+        for (paramIndex in paramTypes.indices) {
             val paramType = paramTypes[paramIndex]
             val paramName = paramNames?.get(paramIndex)
 
-            val methodParam = MethodParameter.forExecutable(executable as Executable, paramIndex)
+            val methodParam = MethodParameter.forExecutable(executable.javaConstructor as Executable, paramIndex)
 
             try {
                 val autowiredArgument = resolveAutowiredArgument(
@@ -108,9 +107,9 @@ class ConstructorResolver(val beanFactory: AbstractAutowireCapableBeanFactory) {
         }
     }
 
-    private fun instantiate(beanName: String, mbd: RootBeanDefinition, constructorToUse: KFunction<*>, argsToUse: Array<Any>): Any {
+    private fun instantiate(beanName: String, mbd: RootBeanDefinition, constructorToUse: KFunction<*>, argsToUse: Array<Any?>): Any {
         try {
-            return BeanUtils.instantiateClass(constructorToUse.javaConstructor!!, argsToUse)
+            return BeanUtils.instantiateClass(constructorToUse.javaConstructor!!, *argsToUse)
         } catch (ex: Throwable) {
             throw BeanCreationException(beanName, "Bean instantiation via constructor failed", ex)
         }
@@ -129,7 +128,7 @@ class ConstructorResolver(val beanFactory: AbstractAutowireCapableBeanFactory) {
     }
 
     companion object {
-        private val EMPTY_ARGS: Array<Any> = emptyArray()
+        private val EMPTY_ARGS: Array<Any?> = emptyArray()
 
         private class ArgumentsHolder(size: Int) {
 
