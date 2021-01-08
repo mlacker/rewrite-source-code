@@ -1,7 +1,8 @@
 package com.mlacker.samples
 
+import com.mlacker.samples.beans.factory.support.DefaultListableBeanFactory
+import com.mlacker.samples.beans.factory.support.RootBeanDefinition
 import org.apache.commons.logging.LogFactory
-import org.springframework.context.annotation.AnnotationConfigApplicationContext
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.ComponentScan
 import org.springframework.context.annotation.Configuration
@@ -30,10 +31,14 @@ class BeanC(
 
 fun main() {
     val log = LogFactory.getLog(Application::class.java)
-    val applicationContext = AnnotationConfigApplicationContext(Application::class.java)
 
-    val beanC = applicationContext.getBean(BeanC::class.java)
-    applicationContext.getBean(BeanC::class.java)
+    val beanFactory = DefaultListableBeanFactory()
+    beanFactory.registerBeanDefinition("application", RootBeanDefinition().apply { beanClass = Application::class })
+    beanFactory.registerBeanDefinition("beanA", RootBeanDefinition().apply { beanClass = BeanA::class })
+    beanFactory.registerBeanDefinition("beanB", RootBeanDefinition().apply { beanClass = BeanB::class })
+    beanFactory.registerBeanDefinition("beanC", RootBeanDefinition().apply { beanClass = BeanC::class })
+
+    val beanC = beanFactory.getBean<BeanC>("beanC")
 
     log.debug(beanC)
     log.debug(beanC.beanA)
