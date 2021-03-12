@@ -20,6 +20,8 @@
     <modules>
         <module>spring-beans</module>
         <module>spring-mvc</module>
+        <module>spring-cloud-eureka-server</module>
+        <module>spring-cloud-eureka-client</module>
     </modules>
 
     <dependencyManagement>
