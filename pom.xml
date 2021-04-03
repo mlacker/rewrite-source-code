@@ -20,8 +20,11 @@
     <modules>
         <module>spring-beans</module>
         <module>spring-mvc</module>
+        <module>spring-cloud-commons</module>
+        <module>spring-cloud-loadbalancer</module>
         <module>spring-cloud-eureka-server</module>
         <module>spring-cloud-eureka-client</module>
+        <module>spring-cloud-netflix-ribbon</module>
     </modules>
 
     <dependencyManagement>
@@ -39,6 +42,16 @@
                 <version>${spring.cloud.version}</version>
                 <type>pom</type>
                 <scope>import</scope>
+            </dependency>
+            <dependency>
+                <groupId>com.mlacker.samples</groupId>
+                <artifactId>spring-cloud-commons</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mlacker.samples</groupId>
+                <artifactId>spring-cloud-loadbalancer</artifactId>
+                <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
