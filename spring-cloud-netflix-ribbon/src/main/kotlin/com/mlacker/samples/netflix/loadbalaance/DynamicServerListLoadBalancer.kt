@@ -1,7 +1,13 @@
 package com.mlacker.samples.netflix.loadbalaance
 
 import com.netflix.client.config.IClientConfig
-import com.netflix.loadbalancer.*
+import com.netflix.loadbalancer.AbstractServerListFilter
+import com.netflix.loadbalancer.IPing
+import com.netflix.loadbalancer.PollingServerListUpdater
+import com.netflix.loadbalancer.Server
+import com.netflix.loadbalancer.ServerList
+import com.netflix.loadbalancer.ServerListFilter
+import com.netflix.loadbalancer.ServerListUpdater
 import org.slf4j.LoggerFactory
 
 open class DynamicServerListLoadBalancer<T : Server>(

@@ -3,7 +3,6 @@ package com.mlacker.samples.netflix.loadbalaance
 import com.netflix.client.ClientFactory
 import com.netflix.client.config.IClientConfig
 import com.netflix.loadbalancer.IPing
-import com.netflix.loadbalancer.IRule
 import com.netflix.loadbalancer.Server
 import com.netflix.loadbalancer.ServerList
 import com.netflix.loadbalancer.ServerListFilter

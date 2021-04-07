@@ -3,9 +3,7 @@ package com.mlacker.samples.netflix.loadbalaance
 import com.netflix.client.config.IClientConfig
 import com.netflix.loadbalancer.IPing
 import com.netflix.loadbalancer.IPingStrategy
-import com.netflix.loadbalancer.IRule
 import com.netflix.loadbalancer.LoadBalancerStats
-import com.netflix.loadbalancer.RoundRobinRule
 import com.netflix.loadbalancer.Server
 import org.slf4j.LoggerFactory
 import java.util.*
@@ -14,14 +12,15 @@ open class BaseLoadBalancer(
     protected var name: String = "default",
     protected val clientConfig: IClientConfig? = null,
     protected val rule: IRule = RoundRobinRule(),
-    final override val loadBalancerStats: LoadBalancerStats = LoadBalancerStats(name),
     protected val ping: IPing? = null,
-    private val pingStrategy: IPingStrategy = SerialPingStrategy()
+    final override val loadBalancerStats: LoadBalancerStats = LoadBalancerStats(name)
 ) : AbstractLoadBalancer() {
 
     companion object {
         private val logger = LoggerFactory.getLogger(BaseLoadBalancer::class.java)
     }
+
+    private val pingStrategy: IPingStrategy = SerialPingStrategy()
 
     private var allServerList: MutableList<Server> = mutableListOf()
     private var upServerList: List<Server> = emptyList()
@@ -30,7 +29,17 @@ open class BaseLoadBalancer(
     private val pingIntervalSeconds: Long = 10
 
     init {
-        setupPingTask()
+        if (clientConfig != null) {
+            initWithConfig(clientConfig, rule)
+        } else {
+            setupPingTask()
+        }
+    }
+
+    private fun initWithConfig(clientConfig: IClientConfig, rule: IRule) {
+        this.name = clientConfig.clientName
+
+        rule.loadBalancer = this
     }
 
     private fun setupPingTask() {
