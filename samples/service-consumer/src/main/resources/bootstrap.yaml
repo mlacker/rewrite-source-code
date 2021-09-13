@@ -1,8 +1,7 @@
-server:
-  port: 8400
 spring:
   application:
     name: consumer
   cloud:
     nacos:
-      server-addr: localhost:8848
+      config:
+        server-addr: localhost:8848
