@@ -1,0 +1,18 @@
+server:
+  port: 8000
+spring:
+  application:
+    name: gateway
+ribbon:
+  ConnectionTimeout: 1000
+  ReadTimeout: 3000
+  OkToRetryOnAllOperations: true
+  MaxAutoRetries: 1
+  MaxAutoRetriesNextServer: 0
+  retryableStatusCodes: 500
+zuul:
+  routes:
+    provider-api:
+      path: /provider-api/**
+      serviceId: provider
+  retryable: true
