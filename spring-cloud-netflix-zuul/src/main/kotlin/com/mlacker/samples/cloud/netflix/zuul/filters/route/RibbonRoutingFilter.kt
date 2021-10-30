@@ -15,8 +15,8 @@ import org.springframework.http.client.ClientHttpResponse
 import java.io.InputStream
 
 class RibbonRoutingFilter(
-        private val helper: ProxyRequestHelper,
-        private val ribbonCommandFactory: RibbonCommandFactory<*>
+    private val helper: ProxyRequestHelper,
+    private val ribbonCommandFactory: RibbonCommandFactory<*>,
 ) : ZuulFilter() {
 
     override val filterType: FilterType
@@ -46,14 +46,14 @@ class RibbonRoutingFilter(
 
     private fun buildCommandContext(context: RequestContext): RibbonCommandContext {
         val headers = this.helper
-                .buildZuulRequestHeaders(context.request)
+            .buildZuulRequestHeaders(context.request)
         val params = this.helper
-                .buildZuulRequestQueryParams(context.request)
+            .buildZuulRequestQueryParams(context.request)
         val verb = context.request.method ?: "GET"
 
         val requestEntity = RequestContext
-                .currentContext[REQUEST_ENTITY_KEY] as InputStream?
-                ?: context.request.inputStream
+            .currentContext[REQUEST_ENTITY_KEY] as InputStream?
+            ?: context.request.inputStream
 
         val serviceId = context[SERVICE_ID_KEY] as String
         val retryable = context[RETRYABLE_KEY] as Boolean
@@ -61,48 +61,39 @@ class RibbonRoutingFilter(
         val contentLength = context.request.contentLengthLong
 
         val uri = this.helper.buildZuulRequestURI(context.request)
-                .replace("//", "/")
+            .replace("//", "/")
 
         return RibbonCommandContext(serviceId, verb, uri, retryable, headers, params,
-                requestEntity, null, contentLength, loadBalanceKey)
+            requestEntity, null, contentLength, loadBalanceKey)
     }
 
     private fun forward(context: RibbonCommandContext): ClientHttpResponse {
-        val info = this.helper.debug(context.method,
-                context.uri, context.headers, context.params,
-                context.requestEntity)
-
         val command = this.ribbonCommandFactory.create(context)
 
         return try {
-            val response = command.execute()
-            this.helper.appendDebug(info, response.rawStatusCode,
-                    response.headers)
-            response
+            command.execute()
         } catch (ex: HystrixRuntimeException) {
-            handleException(info, ex)
+            handleException(ex)
         }
     }
 
-    private fun handleException(
-            info: MutableMap<String, Any>, ex: HystrixRuntimeException
-    ): ClientHttpResponse {
+    private fun handleException(ex: HystrixRuntimeException): ClientHttpResponse {
         var statusCode = HttpStatus.INTERNAL_SERVER_ERROR.value()
         var message = ex.failureType.toString()
         var cause: Throwable = ex
 
         val clientException = findClientException(ex)
-                ?: findClientException(ex.fallbackException)
+            ?: findClientException(ex.fallbackException)
 
         if (clientException != null) {
             if (clientException.errorType ==
-                    ClientException.ErrorType.SERVER_THROTTLED) {
+                ClientException.ErrorType.SERVER_THROTTLED
+            ) {
                 statusCode = HttpStatus.SERVICE_UNAVAILABLE.value()
             }
             cause = clientException
             message = clientException.errorType.toString()
         }
-        info["status"] = statusCode
         throw ZuulException(cause, "Forwarding error", statusCode, message)
     }
 
@@ -119,6 +110,6 @@ class RibbonRoutingFilter(
     private fun setResponse(resp: ClientHttpResponse) {
         RequestContext.currentContext["zuulResponse"] = resp
         this.helper.setResponse(resp.rawStatusCode, resp.body,
-                resp.headers)
+            resp.headers)
     }
 }
