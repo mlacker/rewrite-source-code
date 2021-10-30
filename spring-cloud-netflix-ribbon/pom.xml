@@ -26,6 +26,10 @@
         </dependency>
         <dependency>
             <groupId>com.netflix.ribbon</groupId>
+            <artifactId>ribbon-httpclient</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.netflix.ribbon</groupId>
             <artifactId>ribbon-loadbalancer</artifactId>
         </dependency>
         <dependency>
@@ -35,6 +39,12 @@
         <dependency>
             <groupId>com.mlacker.samples</groupId>
             <artifactId>spring-cloud-loadbalancer</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>16.0.1</version>
+            <scope>compile</scope>
         </dependency>
     </dependencies>
 </project>
