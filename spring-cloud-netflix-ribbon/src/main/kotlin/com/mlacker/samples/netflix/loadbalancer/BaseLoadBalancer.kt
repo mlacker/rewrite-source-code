@@ -1,4 +1,4 @@
-package com.mlacker.samples.netflix.loadbalaance
+package com.mlacker.samples.netflix.loadbalancer
 
 import com.netflix.client.config.IClientConfig
 import com.netflix.loadbalancer.IPing

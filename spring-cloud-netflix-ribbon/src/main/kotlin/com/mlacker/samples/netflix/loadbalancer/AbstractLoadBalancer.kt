@@ -1,4 +1,4 @@
-package com.mlacker.samples.netflix.loadbalaance
+package com.mlacker.samples.netflix.loadbalancer
 
 import com.netflix.loadbalancer.LoadBalancerStats
 import com.netflix.loadbalancer.Server

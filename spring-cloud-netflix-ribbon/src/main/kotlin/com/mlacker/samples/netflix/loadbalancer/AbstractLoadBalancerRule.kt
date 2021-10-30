@@ -1,4 +1,4 @@
-package com.mlacker.samples.netflix.loadbalaance
+package com.mlacker.samples.netflix.loadbalancer
 
 abstract class AbstractLoadBalancerRule : IRule {
 
