@@ -20,5 +20,9 @@
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-starter-netflix-zuul</artifactId>
     </dependency>
+    <dependency>
+        <groupId>com.mlacker.samples</groupId>
+        <artifactId>spring-cloud-netflix-ribbon</artifactId>
+    </dependency>
 </dependencies>
 </project>
