@@ -14,7 +14,7 @@ interface EurekaClient: LookupService {
 
     fun getApplications(serviceUrl: String): Applications?
 
-    fun getInstancesByVipAddress(vipAddress: String?): List<InstanceInfo>?
+    fun getInstancesByVipAddress(vipAddress: String?): List<InstanceInfo>
 
     fun shutdown()
 }

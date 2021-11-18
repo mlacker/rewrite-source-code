@@ -178,7 +178,7 @@ class DiscoveryClient(
     }
 
     // 719
-    override fun getInstancesByVipAddress(vipAddress: String?): List<InstanceInfo>? {
+    override fun getInstancesByVipAddress(vipAddress: String?): List<InstanceInfo> {
         if (vipAddress == null) {
             throw IllegalArgumentException("Supplied VIP Address cannot be null")
         }
