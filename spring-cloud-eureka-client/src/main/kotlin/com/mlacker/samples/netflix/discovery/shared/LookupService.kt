@@ -1,8 +1,6 @@
-package com.mlacker.samples.discovery.shared
+package com.mlacker.samples.netflix.discovery.shared
 
-import com.netflix.appinfo.InstanceInfo
-import com.netflix.discovery.shared.Application
-import com.netflix.discovery.shared.Applications
+import com.mlacker.samples.netflix.appinfo.InstanceInfo
 
 interface LookupService {
 

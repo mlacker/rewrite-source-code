@@ -1,6 +1,6 @@
-package com.mlacker.samples.discovery
+package com.mlacker.samples.netflix.discovery
 
-import com.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.InstanceInfo
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 
@@ -8,9 +8,9 @@ import java.util.concurrent.TimeUnit
  * A task for updating and replicating the local instanceInfo to the remote server.
  */
 class InstanceInfoReplicator(
-        private val discoveryClient: DiscoveryClient,
-        private val instanceInfo: InstanceInfo,
-        private val replicationIntervalSeconds: Int
+    private val discoveryClient: DiscoveryClient,
+    private val instanceInfo: InstanceInfo,
+    private val replicationIntervalSeconds: Int
 ) : Runnable {
 
     private val scheduler = Executors.newScheduledThreadPool(1)

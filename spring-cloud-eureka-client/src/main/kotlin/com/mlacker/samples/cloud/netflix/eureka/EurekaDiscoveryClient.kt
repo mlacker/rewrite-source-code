@@ -2,8 +2,8 @@ package com.mlacker.samples.cloud.netflix.eureka
 
 import com.mlacker.samples.cloud.client.ServiceInstance
 import com.mlacker.samples.cloud.client.discovery.DiscoveryClient
-import com.mlacker.samples.discovery.EurekaClient
-import com.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.discovery.EurekaClient
 
 
 class EurekaDiscoveryClient(

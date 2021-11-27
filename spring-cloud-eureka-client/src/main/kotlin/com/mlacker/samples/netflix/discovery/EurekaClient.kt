@@ -1,10 +1,10 @@
-package com.mlacker.samples.discovery
+package com.mlacker.samples.netflix.discovery
 
-import com.mlacker.samples.discovery.shared.LookupService
-import com.netflix.appinfo.ApplicationInfoManager
-import com.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.ApplicationInfoManager
+import com.mlacker.samples.netflix.discovery.shared.Applications
+import com.mlacker.samples.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.discovery.shared.LookupService
 import com.netflix.discovery.EurekaClientConfig
-import com.netflix.discovery.shared.Applications
 
 interface EurekaClient: LookupService {
 

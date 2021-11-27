@@ -1,9 +1,11 @@
 package com.mlacker.samples.cloud.netflix.eureka
 
 import com.mlacker.samples.cloud.client.ConditionalOnDiscoveryEnabled
-import com.mlacker.samples.discovery.DiscoveryClient
-import com.mlacker.samples.discovery.EurekaClient
-import com.netflix.appinfo.ApplicationInfoManager
+import com.mlacker.samples.netflix.appinfo.ApplicationInfoManager
+import com.mlacker.samples.netflix.discovery.DiscoveryClient
+import com.mlacker.samples.netflix.discovery.EurekaClient
+import com.mlacker.samples.netflix.discovery.EurekaTransport
+import com.mlacker.samples.netflix.discovery.shared.transport.EurekaHttpClient
 import com.netflix.appinfo.EurekaInstanceConfig
 import com.netflix.discovery.EurekaClientConfig
 import org.springframework.boot.autoconfigure.AutoConfigureAfter
@@ -45,8 +47,20 @@ class EurekaClientAutoConfiguration(private val env: ConfigurableEnvironment) {
 
         @Bean(destroyMethod = "shutdown")
         @ConditionalOnMissingBean(EurekaClient::class)
-        fun eurekaClient(manager: ApplicationInfoManager, config: EurekaClientConfig): EurekaClient {
-            return DiscoveryClient(manager, config)
+        fun eurekaClient(manager: ApplicationInfoManager, config: EurekaClientConfig, transport: EurekaTransport): EurekaClient {
+            return DiscoveryClient(manager, config, transport)
+        }
+
+        @Bean
+        @ConditionalOnMissingBean(ApplicationInfoManager::class)
+        fun eurekaApplicationInfoManager(config: EurekaInstanceConfig): ApplicationInfoManager {
+            val instanceInfo = InstanceInfoFactory().create(config)
+            return ApplicationInfoManager(instanceInfo)
+        }
+
+        @Bean
+        fun eurekaTransport(eurekaHttpClient: EurekaHttpClient): EurekaTransport {
+            return EurekaTransport(eurekaHttpClient, eurekaHttpClient)
         }
     }
 }

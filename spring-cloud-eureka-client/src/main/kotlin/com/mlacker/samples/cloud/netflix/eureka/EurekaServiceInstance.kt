@@ -1,7 +1,7 @@
 package com.mlacker.samples.cloud.netflix.eureka
 
 import com.mlacker.samples.cloud.client.ServiceInstance
-import com.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.InstanceInfo
 import java.net.URI
 
 class EurekaServiceInstance(val instance: InstanceInfo) : ServiceInstance {

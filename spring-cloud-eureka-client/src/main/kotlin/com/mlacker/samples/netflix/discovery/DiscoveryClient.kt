@@ -1,16 +1,13 @@
-package com.mlacker.samples.discovery
+package com.mlacker.samples.netflix.discovery
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
-import com.netflix.appinfo.ApplicationInfoManager
-import com.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.ApplicationInfoManager
+import com.mlacker.samples.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.discovery.shared.Application
+import com.mlacker.samples.netflix.discovery.shared.Applications
 import com.netflix.discovery.EurekaClientConfig
 import com.netflix.discovery.TimedSupervisorTask
-import com.netflix.discovery.shared.Application
-import com.netflix.discovery.shared.Applications
-import com.netflix.discovery.shared.transport.EurekaHttpClient
-import com.netflix.discovery.shared.transport.EurekaHttpClients
 import org.slf4j.LoggerFactory
-import org.springframework.cloud.netflix.eureka.http.RestTemplateTransportClientFactories
 import org.springframework.http.HttpStatus
 import java.util.concurrent.Executors
 import java.util.concurrent.ScheduledExecutorService
@@ -27,6 +24,7 @@ import javax.ws.rs.core.Response
 class DiscoveryClient(
     override val applicationInfoManager: ApplicationInfoManager,
     override val clientConfig: EurekaClientConfig,
+    private val eurekaTransport: EurekaTransport,
 ) : EurekaClient {
 
     companion object {
@@ -42,7 +40,6 @@ class DiscoveryClient(
     private val localRegionApps: AtomicReference<Applications> = AtomicReference(Applications())
     private var instanceInfo: InstanceInfo = applicationInfoManager.info
 
-    private val eurekaTransport: EurekaTransport?
 
     private lateinit var instanceInfoReplicator: InstanceInfoReplicator
 
@@ -84,9 +81,6 @@ class DiscoveryClient(
                         .setDaemon(true)
                         .build()
                 )
-
-                eurekaTransport = EurekaTransport()
-                scheduleServerEndpointTask(eurekaTransport)
             } catch (ex: Throwable) {
                 throw RuntimeException("Failed to initialize DiscoverClient!", ex)
             }
@@ -112,52 +106,12 @@ class DiscoveryClient(
             this.scheduler = null
             this.heartbeatExecutor = null
             this.cacheRefreshExecutor = null
-            this.eurekaTransport = null
         }
 
         val initTimestampMs = System.currentTimeMillis()
         val initRegistrySize = this.getApplications().size()
         logger.info("Discovery Client initialized at timestamp {} with initial instances count: {}",
             initTimestampMs, initRegistrySize)
-    }
-
-    // 496
-    private fun scheduleServerEndpointTask(eurekaTransport: EurekaTransport) {
-        val transportConfig = clientConfig.transportConfig
-        val transportClientFactories = RestTemplateTransportClientFactories()
-        val transportClientFactory = transportClientFactories
-            .newTransportClientFactory(clientConfig, emptyList(), applicationInfoManager.info)
-
-        val bootstrapResolver = EurekaHttpClients.newBootstrapResolver(
-            clientConfig,
-            transportConfig,
-            transportClientFactory,
-            applicationInfoManager.info,
-            null,
-            null
-        )
-
-        if (clientConfig.shouldRegisterWithEureka()) {
-            val newRegistrationClientFactory = EurekaHttpClients.registrationClientFactory(
-                bootstrapResolver,
-                transportClientFactory,
-                transportConfig
-            )
-            eurekaTransport.registrationClient = newRegistrationClientFactory.newClient()
-        }
-
-        if (clientConfig.shouldFetchRegistry()) {
-            val newQueryClientFactory = EurekaHttpClients.queryClientFactory(
-                bootstrapResolver,
-                transportClientFactory,
-                clientConfig,
-                transportConfig,
-                applicationInfoManager.info,
-                null,
-                null
-            )
-            eurekaTransport.queryClient = newQueryClientFactory.newClient()
-        }
     }
 
     // 611
@@ -173,7 +127,7 @@ class DiscoveryClient(
     // 651
     override fun getInstancesById(id: String): List<InstanceInfo> {
         return getApplications().registeredApplications
-            .mapNotNull { it.getByInstanceId(id) }
+            .mapNotNull { it.getInstanceById(id) }
             .toList()
     }
 
@@ -193,7 +147,7 @@ class DiscoveryClient(
             throw RuntimeException("No matchers for the virtual host name: $virtualHostname")
         }
         val apps = this.localRegionApps.get()
-        val index = (apps.getNextIndex(virtualHostname, false)
+        val index = (apps.getNextIndex(virtualHostname)
             .incrementAndGet() % instanceInfoList.size).toInt()
 
         return instanceInfoList[index]
@@ -202,8 +156,8 @@ class DiscoveryClient(
     //851
     override fun getApplications(serviceUrl: String): Applications? {
         val response = (clientConfig.registryRefreshSingleVipAddress
-            ?.let { eurekaTransport!!.queryClient.getVip(it) }
-            ?: eurekaTransport!!.queryClient.getApplications())
+            ?.let { eurekaTransport.queryClient.getVip(it) }
+            ?: eurekaTransport.queryClient.getApplications())
 
         if (response.statusCode == Response.Status.OK.statusCode) {
             return response.entity
@@ -217,13 +171,13 @@ class DiscoveryClient(
      * 872
      */
     fun register(): Boolean {
-        return eurekaTransport!!.registrationClient.register(instanceInfo)
+        return eurekaTransport.registrationClient.register(instanceInfo)
             .statusCode == HttpStatus.NO_CONTENT.value()
     }
 
     // 890
     private fun renew(): Boolean {
-        val response = eurekaTransport!!.registrationClient.sendHeartBeat(
+        val response = eurekaTransport.registrationClient.sendHeartBeat(
             instanceInfo.appName, instanceInfo.id, instanceInfo, null)
 
         if (response.statusCode == Response.Status.NOT_FOUND.statusCode) {
@@ -248,15 +202,15 @@ class DiscoveryClient(
             unregister()
         }
 
-        eurekaTransport?.shutdown()
+        eurekaTransport.shutdown()
 
         logger.info("Completed shut down of DiscoveryClient")
     }
 
     // 967
     private fun unregister() {
-        eurekaTransport?.registrationClient
-            ?.cancel(instanceInfo.appName, instanceInfo.id)
+        eurekaTransport.registrationClient
+            .cancel(instanceInfo.appName, instanceInfo.id)
     }
 
     // 992
@@ -273,13 +227,13 @@ class DiscoveryClient(
             val applications = getApplications()
 
             if (clientConfig.shouldDisableDelta()
-                || applications.registeredApplications.size == 0
+                || applications.registeredApplications.isEmpty()
             ) {
                 getAndStoreFullRegistry()
             } else {
                 getAndUpdateDelta()
             }
-            applications.appsHashCode = applications.reconcileHashCode
+            applications.appsHashCode = applications.getReconcileHashCode()
         } catch (ex: Throwable) {
             return false
         }
@@ -298,7 +252,7 @@ class DiscoveryClient(
         if (instanceInfo.appName != null) {
             val app = getApplication(instanceInfo.appName)
             if (app != null) {
-                val remoteInstanceInfo = app.getByInstanceId(instanceInfo.id)
+                val remoteInstanceInfo = app.getInstanceById(instanceInfo.id)
                 if (remoteInstanceInfo != null) {
                     currentRemoteInstanceStatus = remoteInstanceInfo.status
                 }
@@ -318,7 +272,7 @@ class DiscoveryClient(
         logger.info("Getting all instance registry info from the eureka server")
 
         var apps: Applications? = null
-        val httpResponse = eurekaTransport!!.queryClient.getApplications()
+        val httpResponse = eurekaTransport.queryClient.getApplications()
         if (httpResponse.statusCode == Response.Status.OK.statusCode) {
             apps = httpResponse.entity
         }
@@ -330,7 +284,7 @@ class DiscoveryClient(
 
     private fun getAndUpdateDelta() {
         var delta: Applications? = null
-        val httpResponse = eurekaTransport!!.queryClient.getDelta()
+        val httpResponse = eurekaTransport.queryClient.getDelta()
         if (httpResponse.statusCode == Response.Status.OK.statusCode) {
             delta = httpResponse.entity
         }
@@ -358,13 +312,13 @@ class DiscoveryClient(
                         applications.addApplication(app)
                     }
 
-                    applications.getRegisteredApplications(instance.appName).addInstance(instance)
+                    applications.getRegisteredApplications(instance.appName)!!.addInstance(instance)
                 } else if (instance.actionType == InstanceInfo.ActionType.DELETED) {
                     val existingApp = applications.getRegisteredApplications(instance.appName)
                     if (existingApp != null) {
                         existingApp.removeInstance(instance)
 
-                        if (existingApp.instancesAsIsFromEureka.isEmpty()) {
+                        if (existingApp.getInstancesAsIsFromEureka().isEmpty()) {
                             applications.removeApplication(existingApp)
                         }
                     }
@@ -442,57 +396,6 @@ class DiscoveryClient(
         val success = fetchRegistry()
         if (success) {
             lastSuccessfulRegistryFetchTimestamp = System.currentTimeMillis()
-        }
-    }
-
-    // 197
-    private class EurekaTransport {
-        lateinit var registrationClient: EurekaHttpClient
-        lateinit var queryClient: EurekaHttpClient
-
-        fun shutdown() {
-            registrationClient.shutdown()
-            queryClient.shutdown()
-        }
-    }
-}
-
-class EndpointUtils {
-    companion object {
-
-        private const val DEFAULT_ZONE = "default"
-
-        /**
-         * Get the list of all eureka service urls from properties file for the eureka client to talk to.
-         */
-        fun getServiceUrlsFromConfig(clientConfig: EurekaClientConfig, instanceZone: String?, preferSameZone: Boolean): List<String> {
-            val orderedUrls = mutableListOf<String>()
-            var availZones = clientConfig.getAvailabilityZones(clientConfig.region)
-            if (availZones == null || availZones.isEmpty()) {
-                availZones = arrayOf(DEFAULT_ZONE)
-            }
-
-            val myZoneOffset = availZones
-                .indexOfFirst { instanceZone != null && (instanceZone == it) == preferSameZone }
-                .let { if (it > 0) it else 0 }
-
-            clientConfig.getEurekaServerServiceUrls(availZones[myZoneOffset])?.let {
-                orderedUrls.addAll(it)
-            }
-
-            var currentOffset = if (myZoneOffset != availZones.size - 1) myZoneOffset + 1 else 0
-            while (currentOffset != myZoneOffset) {
-                clientConfig.getEurekaServerServiceUrls(availZones[currentOffset])?.let {
-                    orderedUrls.addAll(it)
-                }
-                currentOffset = if (myZoneOffset != availZones.size - 1) currentOffset + 1 else 0
-            }
-
-            if (orderedUrls.isEmpty()) {
-                throw IllegalArgumentException()
-            }
-
-            return orderedUrls
         }
     }
 }

@@ -1,7 +1,7 @@
 package com.mlacker.samples.cloud.netflix.eureka
 
 import com.mlacker.samples.cloud.client.ConditionalOnDiscoveryEnabled
-import com.mlacker.samples.discovery.EurekaClient
+import com.mlacker.samples.netflix.discovery.EurekaClient
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
