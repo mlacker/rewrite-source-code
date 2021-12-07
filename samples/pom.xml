@@ -14,6 +14,7 @@
 
     <modules>
         <module>registry</module>
+        <module>gateway</module>
         <module>service-provider</module>
         <module>service-provider-api</module>
         <module>service-consumer</module>

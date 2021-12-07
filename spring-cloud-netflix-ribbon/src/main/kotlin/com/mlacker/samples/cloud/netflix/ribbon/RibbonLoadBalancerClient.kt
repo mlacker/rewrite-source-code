@@ -1,7 +1,7 @@
 package com.mlacker.samples.cloud.netflix.ribbon
 
 import com.mlacker.samples.cloud.client.loadbalancer.LoadBalancerClient
-import com.mlacker.samples.netflix.loadbalaance.ILoadBalancer
+import com.mlacker.samples.netflix.loadbalancer.ILoadBalancer
 import com.netflix.loadbalancer.Server
 import org.springframework.cloud.client.ServiceInstance
 import org.springframework.cloud.client.loadbalancer.LoadBalancerRequest
@@ -73,7 +73,6 @@ class RibbonLoadBalancerClient(
     }
 
     private fun getLoadBalancer(serviceId: String): ILoadBalancer? {
-        // this.clientFactory.getLoadBalancer(serviceId)
         return this.clientFactory.getInstance(serviceId, ILoadBalancer::class.java)
     }
 }
