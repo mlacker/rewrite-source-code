@@ -1,6 +1,7 @@
 package com.mlacker.samples.cloud.netflix.eureka.http
 
 import com.mlacker.samples.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.InstanceStatus
 import com.mlacker.samples.netflix.discovery.shared.Application
 import com.mlacker.samples.netflix.discovery.shared.Applications
 import com.mlacker.samples.netflix.discovery.shared.transport.EurekaHttpClient
@@ -33,12 +34,12 @@ class RestTemplateEurekaHttpClient(
         appName: String,
         id: String,
         info: InstanceInfo,
-        overriddenStatus: InstanceInfo.InstanceStatus?,
+        overriddenStatus: InstanceStatus?,
     ): EurekaHttpResponse<InstanceInfo> {
         TODO("Not yet implemented")
     }
 
-    override fun statusUpdate(appName: String, id: String, newStatus: InstanceInfo.InstanceStatus, info: InstanceInfo): EurekaHttpResponse<Void> {
+    override fun statusUpdate(appName: String, id: String, newStatus: InstanceStatus, info: InstanceInfo): EurekaHttpResponse<Void> {
         TODO("Not yet implemented")
     }
 

@@ -58,8 +58,13 @@
             </dependency>
             <dependency>
                 <groupId>com.mlacker.samples</groupId>
+                <artifactId>spring-cloud-eureka-client</artifactId>
+                <version>${project.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.mlacker.samples</groupId>
                 <artifactId>spring-cloud-netflix-ribbon</artifactId>
-                <version>1.0-SNAPSHOT</version>
+                <version>${project.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

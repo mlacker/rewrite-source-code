@@ -1,8 +1,10 @@
 package com.mlacker.samples.netflix.discovery
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder
+import com.mlacker.samples.netflix.appinfo.ActionType
 import com.mlacker.samples.netflix.appinfo.ApplicationInfoManager
 import com.mlacker.samples.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.InstanceStatus
 import com.mlacker.samples.netflix.discovery.shared.Application
 import com.mlacker.samples.netflix.discovery.shared.Applications
 import com.netflix.discovery.EurekaClientConfig
@@ -44,7 +46,7 @@ class DiscoveryClient(
     private lateinit var instanceInfoReplicator: InstanceInfoReplicator
 
     @Volatile
-    private var lastRemoteInstanceStatus: InstanceInfo.InstanceStatus = InstanceInfo.InstanceStatus.UNKNOWN
+    private var lastRemoteInstanceStatus: InstanceStatus = InstanceStatus.UNKNOWN
     private var lastSuccessfulRegistryFetchTimestamp = -1L
     private var lastSuccessfulHeartbeatTimestamp = -1L
 
@@ -198,7 +200,7 @@ class DiscoveryClient(
         cancelScheduledTasks()
 
         if (clientConfig.shouldRegisterWithEureka()) {
-            applicationInfoManager.setInstanceStatus(InstanceInfo.InstanceStatus.DOWN)
+            applicationInfoManager.setInstanceStatus(InstanceStatus.DOWN)
             unregister()
         }
 
@@ -248,7 +250,7 @@ class DiscoveryClient(
     // 1040
     private fun updateInstanceRemoteStatus() {
         // Determine this instance's status for this app and set to UNKNOWN if not found
-        var currentRemoteInstanceStatus: InstanceInfo.InstanceStatus? = null
+        var currentRemoteInstanceStatus: InstanceStatus? = null
         if (instanceInfo.appName != null) {
             val app = getApplication(instanceInfo.appName)
             if (app != null) {
@@ -259,7 +261,7 @@ class DiscoveryClient(
             }
         }
         if (currentRemoteInstanceStatus == null) {
-            currentRemoteInstanceStatus = InstanceInfo.InstanceStatus.UNKNOWN
+            currentRemoteInstanceStatus = InstanceStatus.UNKNOWN
         }
 
         if (lastRemoteInstanceStatus != currentRemoteInstanceStatus) {
@@ -304,8 +306,8 @@ class DiscoveryClient(
                 val applications = getApplications()
 
                 deltaCount++
-                if (instance.actionType == InstanceInfo.ActionType.ADDED
-                    || instance.actionType == InstanceInfo.ActionType.MODIFIED
+                if (instance.actionType == ActionType.ADDED
+                    || instance.actionType == ActionType.MODIFIED
                 ) {
                     val existingApp = applications.getRegisteredApplications(instance.appName)
                     if (existingApp == null) {
@@ -313,7 +315,7 @@ class DiscoveryClient(
                     }
 
                     applications.getRegisteredApplications(instance.appName)!!.addInstance(instance)
-                } else if (instance.actionType == InstanceInfo.ActionType.DELETED) {
+                } else if (instance.actionType == ActionType.DELETED) {
                     val existingApp = applications.getRegisteredApplications(instance.appName)
                     if (existingApp != null) {
                         existingApp.removeInstance(instance)

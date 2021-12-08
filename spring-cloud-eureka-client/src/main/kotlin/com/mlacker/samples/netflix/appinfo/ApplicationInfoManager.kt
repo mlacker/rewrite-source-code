@@ -9,7 +9,7 @@ class ApplicationInfoManager(
 
     val info: InstanceInfo = instanceInfo
 
-    fun setInstanceStatus(status: InstanceInfo.InstanceStatus) {
+    fun setInstanceStatus(status: InstanceStatus) {
         instanceInfo.setStatus(status)
     }
 }

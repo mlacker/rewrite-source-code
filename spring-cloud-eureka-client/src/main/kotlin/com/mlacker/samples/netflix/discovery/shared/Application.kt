@@ -1,6 +1,7 @@
 package com.mlacker.samples.netflix.discovery.shared
 
 import com.mlacker.samples.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.InstanceStatus
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicReference
 
@@ -56,7 +57,7 @@ class Application(
             val it = instanceInfoList.iterator()
             while (it.hasNext()) {
                 val instanceInfo = it.next()
-                if (instanceInfo.status != InstanceInfo.InstanceStatus.UP) {
+                if (instanceInfo.status != InstanceStatus.UP) {
                     it.remove()
                 }
             }

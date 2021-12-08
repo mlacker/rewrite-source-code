@@ -3,6 +3,7 @@ package com.mlacker.samples.netflix.discovery.shared
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonProperty
 import com.mlacker.samples.netflix.appinfo.InstanceInfo
+import com.mlacker.samples.netflix.appinfo.InstanceStatus
 import java.lang.StringBuilder
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
@@ -89,7 +90,7 @@ class Applications(
     private fun shuffleAndFilterInstances(srcMap: MutableMap<String, VipIndexSupport>, filterUpInstances: Boolean) {
         for ((_, vipIndexSupport) in srcMap) {
             val filteredInstances: List<InstanceInfo> = vipIndexSupport.instances
-                .filter { !filterUpInstances || it.status == InstanceInfo.InstanceStatus.UP }
+                .filter { !filterUpInstances || it.status == InstanceStatus.UP }
                 .toMutableList()
                 .shuffled()
 

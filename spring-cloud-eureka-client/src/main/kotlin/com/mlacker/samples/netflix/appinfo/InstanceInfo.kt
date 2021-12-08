@@ -71,17 +71,4 @@ data class InstanceInfo(
         }
     }
 
-    enum class InstanceStatus {
-        UP,
-        DOWN,
-        STARTING,
-        OUT_OF_SERVICE,
-        UNKNOWN
-    }
-
-    enum class ActionType {
-        ADDED,
-        MODIFIED,
-        DELETED
-    }
 }
