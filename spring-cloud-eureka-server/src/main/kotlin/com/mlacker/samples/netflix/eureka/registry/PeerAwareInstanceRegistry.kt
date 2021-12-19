@@ -1,8 +1,7 @@
 package com.mlacker.samples.netflix.eureka.registry
 
 import com.mlacker.samples.netflix.appinfo.InstanceInfo
-import com.netflix.eureka.cluster.PeerEurekaNodes
-import com.netflix.eureka.resources.ASGResource
+import com.mlacker.samples.netflix.eureka.cluster.PeerEurekaNodes
 
 interface PeerAwareInstanceRegistry : InstanceRegistry {
 
@@ -13,6 +12,4 @@ interface PeerAwareInstanceRegistry : InstanceRegistry {
     fun shouldAllowAccess(): Boolean
 
     fun register(info: InstanceInfo, isReplication: Boolean)
-
-    fun statusUpdate(asgName: String, newStatus: ASGResource.ASGStatus, isReplication: Boolean)
 }

@@ -10,5 +10,5 @@ interface LookupService {
 
     fun getInstancesById(id: String): List<InstanceInfo>
 
-    fun getNextServerFromEureka(virtualHostname: String): InstanceInfo
+    fun getNextServerFromEureka(virtualHostname: String): InstanceInfo?
 }
