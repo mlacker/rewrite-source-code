@@ -10,7 +10,6 @@ import com.netflix.appinfo.LeaseInfo
 import com.netflix.discovery.EurekaClientConfig
 import com.netflix.eureka.EurekaServerConfig
 import com.netflix.eureka.lease.Lease
-import com.netflix.eureka.registry.ResponseCache
 import com.netflix.eureka.resources.ServerCodecs
 import com.netflix.eureka.util.MeasuredRate
 import java.time.Duration
@@ -30,7 +29,7 @@ import kotlin.random.Random
 abstract class AbstractInstanceRegistry(
     protected val serverConfig: EurekaServerConfig,
     protected val clientConfig: EurekaClientConfig,
-    protected val serverCodecs: ServerCodecs,
+    private val serverCodecs: ServerCodecs,
 ) : InstanceRegistry {
 
     private val registry: ConcurrentHashMap<String, MutableMap<String, Lease<InstanceInfo>>?> = ConcurrentHashMap()
@@ -40,7 +39,7 @@ abstract class AbstractInstanceRegistry(
         .build<String, InstanceStatus>().asMap()
 
     private val readWriteLock: ReadWriteLock = ReentrantReadWriteLock()
-    protected val read: Lock = readWriteLock.readLock()
+    private val read: Lock = readWriteLock.readLock()
     private val write: Lock = readWriteLock.writeLock()
     protected val lock: Any = Any()
 
@@ -56,13 +55,11 @@ abstract class AbstractInstanceRegistry(
     protected var expectedNumberOfClientsSendingRenews: Int = 0
 
     @Volatile
-    private var responseCache: ResponseCache? = null
+    private lateinit var responseCache: ResponseCache
 
     // 131
     override fun initializedResponseCache() {
-        if (responseCache == null) {
-            // responseCache = ResponseCacheImpl(serverConfig, serverCodecs, this)
-        }
+        responseCache = ResponseCacheImpl(serverConfig, serverCodecs, this)
     }
 
     protected fun initRemoteRegionRegistry() {
@@ -70,7 +67,7 @@ abstract class AbstractInstanceRegistry(
     }
 
     // 158
-    override fun getResponseCache(): ResponseCache? = responseCache
+    override fun getResponseCache(): ResponseCache = responseCache
 
     // 162
     fun getRegistrySize(): Long {
@@ -413,7 +410,7 @@ abstract class AbstractInstanceRegistry(
 
     // 1183
     private fun invalidateCache(appName: String, vipAddress: String?) {
-        responseCache!!.invalidate(appName, vipAddress, vipAddress)
+        responseCache.invalidate(appName, vipAddress)
     }
 
     // 1188
@@ -437,7 +434,7 @@ abstract class AbstractInstanceRegistry(
     override fun shutdown() {
         evictionTimer.cancel()
         renewsLastMin.stop()
-        responseCache!!.stop()
+        responseCache.stop()
     }
 
     // 1239

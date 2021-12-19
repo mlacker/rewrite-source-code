@@ -6,7 +6,6 @@ import com.mlacker.samples.netflix.appinfo.InstanceStatus
 import com.mlacker.samples.netflix.discovery.shared.Application
 import com.mlacker.samples.netflix.discovery.shared.LookupService
 import com.mlacker.samples.netflix.eureka.lease.LeaseManager
-import com.netflix.eureka.registry.ResponseCache
 
 interface InstanceRegistry : LeaseManager<InstanceInfo>, LookupService {
 
@@ -30,7 +29,7 @@ interface InstanceRegistry : LeaseManager<InstanceInfo>, LookupService {
 
     fun initializedResponseCache()
 
-    fun getResponseCache(): ResponseCache?
+    fun getResponseCache(): ResponseCache
 
     fun getNumOfRenewsInLastMin(): Long
 
