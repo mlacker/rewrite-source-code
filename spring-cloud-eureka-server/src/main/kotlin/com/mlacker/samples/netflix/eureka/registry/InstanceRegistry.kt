@@ -16,27 +16,27 @@ interface InstanceRegistry : LeaseManager<InstanceInfo>, LookupService {
 
     fun storeOverriddenStatusIfRequired(appName: String, id: String, overriddenStatus: InstanceStatus)
 
-    fun statusUpdate(appName: String, id: String, newStatus: InstanceStatus, lastDirtyTimestamp: String, isReplication: Boolean): Boolean
+    fun statusUpdate(appName: String, id: String, newStatus: InstanceStatus, lastDirtyTimestamp: String?, isReplication: Boolean): Boolean
 
-    fun deleteStatusOverride(appName: String, id: String, newStatus: InstanceStatus, lastDirtyTimestamp: String, isReplication: Boolean): Boolean
+    fun deleteStatusOverride(appName: String, id: String, newStatus: InstanceStatus, lastDirtyTimestamp: String?, isReplication: Boolean): Boolean
 
     fun overriddenInstanceStatusesSnapshot(): Map<String, InstanceStatus>
 
-    fun getStoredApplications(): List<Application>
+    fun getSortedApplications(): List<Application>
 
-    fun getInstanceByAppAndId(appName: String, id: String): InstanceInfo
+    fun getInstanceByAppAndId(appName: String, id: String): InstanceInfo?
 
     fun clearRegistry()
 
     fun initializedResponseCache()
 
-    fun getResponseCache(): ResponseCache
+    fun getResponseCache(): ResponseCache?
 
     fun getNumOfRenewsInLastMin(): Long
 
     fun getNumOfRenewsPerMinThreshold(): Int
 
-    fun isBelowRenewThreshold()
+    fun isBelowRenewThreshold(): Int
 
     fun getLastNRegisteredInstances(): List<Pair<Long, String>>
 

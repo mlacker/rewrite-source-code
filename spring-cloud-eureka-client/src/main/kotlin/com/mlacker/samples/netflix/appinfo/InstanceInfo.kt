@@ -14,18 +14,20 @@ data class InstanceInfo(
     val vipAddress: String?,
     val hostName: String,
     var status: InstanceStatus = InstanceStatus.UP,
-    val overriddenStatus: InstanceStatus = InstanceStatus.UNKNOWN,
-    val leaseInfo: LeaseInfo,
+    var overriddenStatus: InstanceStatus = InstanceStatus.UNKNOWN,
+    var leaseInfo: LeaseInfo,
+    private var isCoordinatingDiscoveryServer: Boolean = false,
     val metadata: Map<String, String> = ConcurrentHashMap(),
-    val lastUpdatedTimestamp: Long = System.currentTimeMillis(),
+    var lastUpdatedTimestamp: Long = System.currentTimeMillis(),
     var lastDirtyTimestamp: Long = lastUpdatedTimestamp,
-    val actionType: ActionType? = null,
+    var actionType: ActionType? = null,
 ) {
     private var isInstanceInfoDirty: Boolean = false
 
     val id: String
         get() = instanceId
 
+    @Synchronized
     fun setStatus(status: InstanceStatus): InstanceStatus? {
         if (this.status != status) {
             val prev = this.status
@@ -34,6 +36,15 @@ data class InstanceInfo(
             return prev
         }
         return null
+    }
+
+    fun setLastUpdatedTimestamp() {
+        this.lastUpdatedTimestamp = System.currentTimeMillis()
+    }
+
+    @Synchronized
+    fun setStatusWithoutDirty(status: InstanceStatus) {
+        this.status = status
     }
 
     val isDirty: Boolean
@@ -69,6 +80,10 @@ data class InstanceInfo(
             other is InstanceInfo -> this.id === other.id
             else -> false
         }
+    }
+
+    fun setIsCoordinatingDiscoveryServer() {
+        isCoordinatingDiscoveryServer = instanceId == ApplicationInfoManager.instance.info.id
     }
 
 }
