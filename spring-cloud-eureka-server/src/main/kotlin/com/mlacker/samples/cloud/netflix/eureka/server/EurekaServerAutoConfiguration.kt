@@ -1,13 +1,13 @@
 package com.mlacker.samples.cloud.netflix.eureka.server
 
-import com.netflix.appinfo.ApplicationInfoManager
-import com.netflix.discovery.EurekaClient
+import com.mlacker.samples.netflix.appinfo.ApplicationInfoManager
+import com.mlacker.samples.netflix.discovery.EurekaClient
+import com.mlacker.samples.netflix.eureka.cluster.PeerEurekaNodes
+import com.mlacker.samples.netflix.eureka.registry.PeerAwareInstanceRegistry
 import com.netflix.discovery.EurekaClientConfig
 import com.netflix.eureka.DefaultEurekaServerContext
 import com.netflix.eureka.EurekaServerConfig
 import com.netflix.eureka.EurekaServerContext
-import com.netflix.eureka.cluster.PeerEurekaNodes
-import com.netflix.eureka.registry.PeerAwareInstanceRegistry
 import com.netflix.eureka.resources.ServerCodecs
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
@@ -15,7 +15,6 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.cloud.netflix.eureka.server.EurekaDashboardProperties
 import org.springframework.cloud.netflix.eureka.server.EurekaServerBootstrap
 import org.springframework.cloud.netflix.eureka.server.EurekaServerConfigBean
-import org.springframework.cloud.netflix.eureka.server.InstanceRegistry
 import org.springframework.cloud.netflix.eureka.server.InstanceRegistryProperties
 import org.springframework.cloud.netflix.eureka.server.ReplicationClientAdditionalFilters
 import org.springframework.context.annotation.Bean
@@ -38,7 +37,7 @@ class EurekaServerAutoConfiguration(
     @Bean
     fun peerAwareInstanceRegistry(serverCodecs: ServerCodecs): PeerAwareInstanceRegistry {
         // force initialization
-        this.eurekaClient.applications
+        this.eurekaClient.getApplications()
         return InstanceRegistry(this.eurekaServerConfig, this.eurekaClientConfig,
             serverCodecs, this.eurekaClient,
             this.instanceRegistryProperties.expectedNumberOfClientsSendingRenews,
@@ -85,5 +84,26 @@ class EurekaServerAutoConfiguration(
             }
             return server
         }
+    }
+
+    // wrap
+    private fun DefaultEurekaServerContext(
+        serverConfig: EurekaServerConfig,
+        serverCodecs: ServerCodecs,
+        registry: PeerAwareInstanceRegistry,
+        peerEurekaNodes: PeerEurekaNodes,
+        applicationInfoManager: ApplicationInfoManager,
+    ): DefaultEurekaServerContext {
+        TODO("Not yet implemented")
+    }
+
+    private fun EurekaServerBootstrap(
+        applicationInfoManager: ApplicationInfoManager,
+        clientConfig: EurekaClientConfig,
+        serverConfig: EurekaServerConfig,
+        registry: PeerAwareInstanceRegistry,
+        serverContext: EurekaServerContext,
+    ): EurekaServerBootstrap {
+        TODO("Not yet implemented")
     }
 }
