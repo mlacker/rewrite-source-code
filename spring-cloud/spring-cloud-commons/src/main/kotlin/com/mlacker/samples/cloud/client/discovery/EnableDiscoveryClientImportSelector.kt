@@ -20,7 +20,7 @@ class EnableDiscoveryClientImportSelector :
 
         if (autoRegister) {
             imports.plus(
-                "com.mlacker.samples.cloud.client.serviceregistry.AutoServiceRegistrationConfiguration")
+                "AutoServiceRegistrationConfiguration")
         }
 
         return imports

@@ -21,52 +21,13 @@
         <module>problems</module>
         <module>samples</module>
         <module>spring-framework</module>
-        <module>spring-cloud-commons</module>
         <module>spring-cloud-loadbalancer</module>
         <module>spring-cloud-eureka-server</module>
         <module>spring-cloud-eureka-client</module>
         <module>spring-cloud-netflix-ribbon</module>
         <module>spring-cloud-netflix-zuul</module>
+        <module>spring-cloud</module>
     </modules>
-
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.boot</groupId>
-                <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring.boot.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring.cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-            <dependency>
-                <groupId>com.mlacker.samples</groupId>
-                <artifactId>spring-cloud-commons</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.mlacker.samples</groupId>
-                <artifactId>spring-cloud-loadbalancer</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.mlacker.samples</groupId>
-                <artifactId>spring-cloud-eureka-client</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-            <dependency>
-                <groupId>com.mlacker.samples</groupId>
-                <artifactId>spring-cloud-netflix-ribbon</artifactId>
-                <version>${project.version}</version>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
 
     <dependencies>
         <dependency>
