@@ -21,8 +21,6 @@
         <module>problems</module>
         <module>samples</module>
         <module>spring-framework</module>
-        <module>spring-cloud-loadbalancer</module>
-        <module>spring-cloud-netflix-ribbon</module>
         <module>spring-cloud-netflix-zuul</module>
         <module>spring-cloud</module>
     </modules>
