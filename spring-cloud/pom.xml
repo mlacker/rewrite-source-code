@@ -19,6 +19,7 @@
         <module>spring-cloud-loadbalancer</module>
         <module>spring-cloud-netflix-ribbon</module>
         <module>spring-cloud-netflix-zuul</module>
+        <module>spring-cloud-samples</module>
     </modules>
 
     <dependencyManagement>

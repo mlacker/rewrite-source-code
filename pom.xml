@@ -19,7 +19,6 @@
 
     <modules>
         <module>problems</module>
-        <module>samples</module>
         <module>spring-framework</module>
         <module>spring-cloud</module>
     </modules>
