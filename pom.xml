@@ -21,7 +21,6 @@
         <module>problems</module>
         <module>samples</module>
         <module>spring-framework</module>
-        <module>spring-mvc</module>
         <module>spring-cloud-commons</module>
         <module>spring-cloud-loadbalancer</module>
         <module>spring-cloud-eureka-server</module>
@@ -118,7 +117,7 @@
                         <plugin>no-arg</plugin>
                     </compilerPlugins>
                     <pluginOptions>
-                        <option>no-arg:annotation=com.mlacker.samples.NoArg</option>
+                        <option>no-arg:annotation=NoArg</option>
                     </pluginOptions>
                 </configuration>
                 <executions>
