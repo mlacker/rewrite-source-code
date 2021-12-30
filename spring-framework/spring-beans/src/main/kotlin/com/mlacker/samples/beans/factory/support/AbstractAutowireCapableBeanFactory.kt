@@ -4,7 +4,6 @@ import com.mlacker.samples.beans.factory.config.AutowireCapableBeanFactory
 import com.mlacker.samples.beans.factory.config.BeanDefinition
 import org.springframework.beans.factory.BeanCreationException
 import org.springframework.beans.factory.InitializingBean
-import kotlin.reflect.full.callSuspend
 import kotlin.reflect.full.createInstance
 import kotlin.reflect.full.primaryConstructor
 
