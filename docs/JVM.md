@@ -48,6 +48,8 @@ thread:23, epoch:2, age:4, biased:1 | 01 | 可偏向(1)
 指向重量级锁的指针 | 10 | 重量级锁
 空,不需要记录信息 | 11 | GC 标记
 
+![markOpp](https://pic2.zhimg.com/80/v2-9e2974141f1be5d88523a1aff1eacb41_720w.jpg)
+
 ## GC
 
 ### 垃圾收集器

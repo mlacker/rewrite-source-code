@@ -13,17 +13,82 @@
 
 ## 同步机制
 
+### Volatile
+
+因为 java 语言的限制，无法保障数组元素的可见性。
+
 ### Synchronized
 
 synchronized是一种互斥锁，一次只能允许一个线程进入被锁住的代码块
 
 又因为每个对象都会有一个与之对应的monitor对象，monitor对象中存储着当前持有锁的线程以及等待锁的线程队列
 
+锁对象的 hashCode 方法被调用，需要撤销偏向锁。
+
+偏向锁适用于只有一个线程获取锁的场景，释放锁后依然保留 mark word 的状态，所以只有一次 CAS 操作的开销。当其它线程 CAS 失败则升级为轻量级锁
+轻量级锁适用于线程交替获取锁的场景，CAS 失败则升级为重量级锁，无自旋重试操作。
+重量级锁则先尝试 CAS 自适应自旋获取锁（非公平锁），根据 JVM 统计信息调整自旋时间长短。
+失败则进入 cxq 队列，当对象锁的持有者释放后，进入 Entry List 队列。
+当调用 Object.wait() 进入 Wait Set 队列
+
+当一个线程尝试获得锁时，如果该锁已经被占用，则会将该线程封装成一个ObjectWaiter对象插入到cxq的队列的队首，然后调用park函数挂起当前线程。在linux系统上，park函数底层调用的是gclib库的pthread_cond_wait，JDK的ReentrantLock底层也是用该方法挂起线程的。更多细节可以看我之前的两篇文章：关于同步的一点思考-下，linux内核级同步机制--futex
+
+当线程释放锁时，会从cxq或EntryList中挑选一个线程唤醒，被选中的线程叫做Heir presumptive即假定继承人（应该是这样翻译），就是图中的Ready Thread，假定继承人被唤醒后会尝试获得锁，但synchronized是非公平的，所以假定继承人不一定能获得锁（这也是它叫"假定"继承人的原因）。
+
+如果线程获得锁后调用Object#wait方法，则会将线程加入到WaitSet中，当被Object#notify唤醒后，会将线程从WaitSet移动到cxq或EntryList中去。需要注意的是，当调用一个锁对象的wait或notify方法时，如当前锁的状态是偏向锁或轻量级锁则会先膨胀成重量级锁。
+
+#### Synchronized和ReentrantLock的区别
+
+Synchronized是JVM层次的锁实现，ReentrantLock是JDK层次的锁实现；
+Synchronized的锁状态是无法在代码中直接判断的，但是ReentrantLock可以通过ReentrantLock#isLocked判断；
+Synchronized是非公平锁，ReentrantLock是可以是公平也可以是非公平的；
+Synchronized是不可以被中断的，而ReentrantLock#lockInterruptibly方法是可以被中断的；
+在发生异常时Synchronized会自动释放锁（由javac编译时自动实现），而ReentrantLock需要开发者在finally块中显示释放锁；
+ReentrantLock获取锁的形式有多种：如立即返回是否成功的tryLock(),以及等待指定时长的获取，更加灵活；
+Synchronized在特定的情况下对于已经在等待的线程是后来的线程先获得锁（上文有说），而ReentrantLock对于已经在等待的线程一定是先来的线程先获得锁；
+
+#### 偏向锁
+
+- 检查对象的 mark word 的锁标志位为无锁状态，且偏向模式（101）
+- 检查对象的偏向线程是否为当前线程，是则获取对象锁（可重入）
+  - 如果（类）偏向模式关闭，则尝试撤销偏向锁（默认开启）
+  - 利用 CAS 操作将 mark word 替换为 class 的 mark word
+- 如果 epoch 不等于 class 的 epoch，则尝试重偏向
+  - 失败则撤销偏向锁
+- 利用 CAS 操作从匿名偏向设为偏向当前线程，成功则获取对象锁
+- 否则说明存在竞争，进入 monitorenter 方法
+
+- 如果锁对象不是偏向模式或者已经偏向其它线程
+- 构造一个无锁状态的 Displaced Mark Word，并将 Lock Record 的 lock 指向它
+- 利用 CAS 将对象头的 mark word 替换为指向 Lock Record 的指针
+  - CAS 失败则检查是不是锁重入，是这设置 displaced header 为 null 表示重入
+  - 否则进入 monitorenter 方法
+
+monitorenter 》 slow_enter
+
+- 如果是无锁状态，设置 Displaced Mark Word，并用 CAS 替换对象头为 Lock Record 的地址
+- 否则，检查对象锁（轻量级锁）的所有者是否为当前线程，是则为重入锁
+- 否则，说明存在竞争锁，直接膨胀为重量级锁。**无自旋重试**
+
+偏向锁撤销
+
+- 检查偏向的线程是否存活，遍历 jvm 的所有线程，否则直接撤销偏向锁。
+  - 撤销至匿名偏向状态
+  - 否则设置为无锁状态
+- 检查偏向的线程是否还在同步块中，存在则升级为**轻量级锁**
+- 撤销偏向锁
+
 ## Lock
 
 ## 死锁
 
 ## 实践、排查
+
+### 优化
+
+- 锁粗化（Lock Coarsening）：将多个连续的锁扩展成一个范围更大的锁，用以减少频繁互斥同步导致的性能损耗。
+- 锁消除（Lock Elimination）：JVM 即时编译器在运行时，通过逃逸分析，如果判断一段代码中，堆上所有数据不会逃逸出去被其它线程访问到，就可以去除这些所。
+- 轻量级锁（Lightweight Locking）：JDK 1.6 引入
 
 - 工作中常用的锁有哪些
 - 关于线程安全，常用的锁介绍一下
