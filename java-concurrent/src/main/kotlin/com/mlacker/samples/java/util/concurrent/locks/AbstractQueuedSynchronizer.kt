@@ -21,7 +21,7 @@ abstract class AbstractQueuedSynchronizer {
     @Volatile
     protected var state: Int = 0
 
-    protected open fun compareAndSetState(expect: Int, update: Int): Boolean {
+    protected fun compareAndSetState(expect: Int, update: Int): Boolean {
         return STATE.compareAndSet(this, expect, update)
     }
 
