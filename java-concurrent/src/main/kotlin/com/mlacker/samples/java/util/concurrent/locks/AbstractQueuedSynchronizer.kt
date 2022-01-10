@@ -279,7 +279,7 @@ abstract class AbstractQueuedSynchronizer {
         throw UnsupportedOperationException()
     }
 
-    protected open fun tryReleaseShared(acquires: Int): Boolean {
+    protected open fun tryReleaseShared(releases: Int): Boolean {
         throw UnsupportedOperationException()
     }
 

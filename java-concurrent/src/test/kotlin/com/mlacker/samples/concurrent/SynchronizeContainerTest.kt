@@ -1,12 +1,11 @@
 package com.mlacker.samples.concurrent
 
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.*
 import java.util.concurrent.Callable
-import java.util.concurrent.CompletableFuture
+import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executors
-import java.util.concurrent.Future
-import java.util.concurrent.FutureTask
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -70,23 +69,31 @@ class SynchronizeContainerTest {
     fun `container test`() {
         val executor = Executors.newCachedThreadPool()
         val container: Container<Int> = SynchronizeContainer(10)
+        val countDownLatch = CountDownLatch(2)
 
-        val producers = listOf(0..100, 100..200)
-            .map { range ->
-                executor.submit {
-                    for (i in range) {
-                        container.put(i)
+        val producers = listOf(
+            0 until 100,
+            100 until 200
+        ).map { range ->
+            executor.submit {
+                for (i in range) {
+                    container.put(i)
+                }
+                countDownLatch.countDown()
+            }
+        }
+        var sum = 0
+        val consumers = (1..10).map {
+            executor.submit {
+                while (true) {
+                    synchronized(sum) {
+                        sum += container.get()
                     }
                 }
             }
-        val consumers = (1..10).map {
-            executor.submit(Callable {
-                var sum = 0
-                while (true) {
-                    sum += container.get()
-                }
-                sum
-            })
         }
+
+        countDownLatch.await()
+        assertEquals(200 * (200 + 1) / 2, sum)
     }
 }
