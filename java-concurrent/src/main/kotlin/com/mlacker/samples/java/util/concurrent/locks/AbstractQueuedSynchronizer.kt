@@ -403,6 +403,15 @@ abstract class AbstractQueuedSynchronizer {
         return TAIL.compareAndSet(this, expect, update)
     }
 
+    protected fun apparentlyFirstQueuedIsExclusive(): Boolean {
+        val h = head
+        val s = head?.next
+        return h != null &&
+                s != null &&
+                !s.isShared() &&
+                s.thread != null
+    }
+
     companion object {
 
         private val STATE: VarHandle
