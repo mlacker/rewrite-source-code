@@ -4,7 +4,7 @@ import com.mlacker.samples.java.util.concurrent.locks.AbstractQueuedSynchronizer
 
 class Semaphore(permits: Int) {
 
-    private val sync: Sync = NonfairSync(permits)
+    private val sync: Sync = Sync(permits)
 
     fun acquire(permits: Int = 1) {
         if (permits < 0) throw IllegalArgumentException()
@@ -31,7 +31,7 @@ class Semaphore(permits: Int) {
         sync.reducePermits(reduction)
     }
 
-    private abstract class Sync(permits: Int) : AbstractQueuedSynchronizer() {
+    private class Sync(permits: Int) : AbstractQueuedSynchronizer() {
 
         init {
             state = permits
@@ -40,6 +40,9 @@ class Semaphore(permits: Int) {
         val permits: Int
             get() = state
 
+        override fun tryAcquireShared(acquires: Int): Int {
+            return nonfairTryAcquireShared(acquires)
+        }
 
         fun nonfairTryAcquireShared(acquires: Int): Int {
             while (true) {
@@ -79,13 +82,6 @@ class Semaphore(permits: Int) {
                 if (current == 0 || compareAndSetState(current, 0))
                     return current
             }
-        }
-    }
-
-    private class NonfairSync(permits: Int) : Sync(permits) {
-
-        override fun tryAcquireShared(acquires: Int): Int {
-            return nonfairTryAcquireShared(acquires)
         }
     }
 }

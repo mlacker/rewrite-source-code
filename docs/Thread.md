@@ -10,7 +10,7 @@
 
 异步和多线程并不是一个同等关系,异步是最终目的,多线程只是我们实现异步的一种手段。
 
-#### 并发（Concurrent）和并行（Parallel）
+### 并发（Concurrent）和并行（Parallel）
 
 在单处理器中多道程序设计系统中，进程被交替执行，表现出一种并发的外部特征；在多处理器系统中，进程不仅可以交替执行，而且可以重叠执行。在多处理器上的程序才可实现并行处理。从而可知，并行是针对多处理器而言的。并行是同时发生的多个并发事件，具有并发的含义，但并发不一定并行，也亦是说并发事件之间不一定要同一时刻发生。
 
@@ -191,7 +191,7 @@ synchronized 是由 JVM 实现的同步机制，通过监视器锁（monitor）�
 但synchronized是非公平的，所以假定继承人不一定能获得锁（这也是它叫"假定"继承人的原因）。
 
 如果线程获得锁后调用Object#wait方法，则会将线程加入到WaitSet中，当被Object#notify唤醒后，会将线程从WaitSet移动到cxq或EntryList中去。需要注意的是，当调用一个锁对象的wait或notify方法时，如当前锁的状态是偏向锁或轻量级锁则会先膨胀成重量级锁。
- 
+
 ```c++
 ObjectMonitor() {
     _header       = NULL;
@@ -234,7 +234,67 @@ Synchronized在特定的情况下对于已经在等待的线程是后来的线�
 
 ## 锁
 
+### AbstractQueuedSynchronizer
+
+抽象的队列式同步器，简称 AQS。
+
+AQS定义两种资源共享方式：Exclusive 和 Share。
+
+不同的自定义同步器争用共享资源的方式也不同。**自定义同步器在实现时只需要实现共享资源state的获取与释放方式即可**，至于具体线程等待队列的维护（如获取资源失败入队/唤醒出队等），AQS 已经实现好了。自定义同步器实现时主要实现以下几种方法：
+
+```kotlin
+// 共享资源
+volatile val state: Int
+volatile val head: Node
+volatile val tail: Node
+
+// 独占方式。尝试获取资源
+fun tryAcquire(acquires: Int): Boolean
+// 独占方式。尝试释放资源
+fun tryRelease(releases: Int): Boolean
+// 共享方式。尝试获取资源。负数表示失败；0表示成功，但没有剩余可用资源；正数表示成功，且有剩余资源
+fun tryAcquireShared(acquires: Int): Int
+// 共享方式。尝试释放资源，如果释放后允许唤醒后续等待结点返回true，否则返回false
+fun tryReleaseShared(releases: Int): Boolean
+// 当前线程是否正在独占资源。只有用到 condition 才需要去实现它
+fun isHeldExclusively(): Boolean
+
+// 表示等待获取资源线程的双向链表
+class Node {
+  volatile prev: Node
+  volatile next: Node
+  volatile waitStatus: Int = 0
+  volatile thread: Thread
+}
+```
+
+AQS 使用 state 来表示共享资源，由同步器实现对共享资源的获取和释放，state 的含义由同步器定义。
+通过内置的 FIFO 来完成获取资源线程的排队工作，该队列由 Node 节点组成，表示等待获取资源的线程。每个节点维护 prev 和 next 的引用，分别指向自己的前序和后序节点。AQS 维护着 head 和 tail 的指针，分别指向队列的头部和尾部。即一个**双端双向的链表**
+
+![AQS 队列](https://images2015.cnblogs.com/blog/1024555/201707/1024555-20170717114859238-311670115.png)
+
+当线程获取资源失败（执行 tryAcquire 失败），会被构造成一个节点加入 CLH 队列中，同时当前线程会被阻塞在队列中（LockSupport.park，底层通过操作系统的 Mutex 实现）。当持有共享资源的线程释放资源时，会唤醒后序节点，然后此节点继续加入到共享资源的竞争中。
+
+---
+
+- AQS 的 head 节点会处于什么状态？
+  - 当只有一个线程或者两个线程交替执行的时候，因为没有并发竞争，所以通过 tryAcquire 直接获取锁，head 为 null
+  - 当两个线程并发竞争时，队列中的节点的前序节点就是头节点，尝试获取成功则设置 head 为当前节点，状态为 0。否则，会将前序节点状态设为 SIGNEL，阻塞当前节点
+  - 如果存在更多的线程加入竞争队列，会依次设置前序节点为 SIGNEL 状态，阻塞自己并等待通知
+  - 当持有资源的线程释放资源时，会将 head 节点的状态设置为 0，并通知队列中的下一个非 CANCELLED Successor 节点 unpark，当 Successor 尝试获取资源成功后，设置自己为 head 节点，如果还存在后续节点，状态为 SIGNEL，否则为 0
+- 当两个线程并发竞争互斥锁时，是否一直处于自旋等待状态？
+  否，tryAcquire 失败后会阻塞等待。
+- AQS.acquire 和 Condition.await 均使用 LockSupport.park 实现，线程如何区分 BLOCKING 和 WAITING 状态？
+  ReentrantLock.lock() 和 Condition.await() 是通过 LockSupport.park() 实现的，状态均为 WAITING
+- 用 jstat 检查 ReentrantLock.lock() 阻塞的线程时，线程持有的锁对象是什么？
+  状态为 WAITING (parking)，- parking to wait for  <0x00000007118eb080>
+
 ### 死锁
+
+1. lock 未释放
+2. Object.await()/Condition.await() 未唤醒
+3. 线程互相持有对方的锁并等待对方
+4. 死循环
 
 #### 死锁的条件
 
@@ -254,7 +314,9 @@ Synchronized在特定的情况下对于已经在等待的线程是后来的线�
 
 ### 优化
 
-- 减少锁的时间
+并发度 = 并行 / (并行 + 串行)
+
+- 减少锁的时间，互斥范围越大程序的并发度越低
 - 拆分锁，提高并发度
 - 双头队列锁，列头入队，列为出队
 - 锁粗化，将循环内的锁放到循坏外，避免频繁的切换
@@ -268,9 +330,13 @@ Synchronized在特定的情况下对于已经在等待的线程是后来的线�
 - 关于线程安全，常用的锁介绍一下
 - 熟悉 JDK 的哪些锁？它们的优缺点和区别？
   volatile, Synchronized, Lock, ReadWriteLock
+  volatile 作为轻量级的同步机制，对 volatile 修饰的变量的操作保障了可见性和有序性。优点是没有上下文的切换，速度非常快。缺点是无法保障多个操作的原子性。
+  synchronized 是由 JVM 实现的同步机制，底层调用操作系统的互斥锁 Metux 实现的。它通过线程互斥的行为保障了临界区的原子性，临界区边界的内存屏障保障可见性，以及 happens-before 原则的有序性。缺点是会引起用户态和内核态的转换，开销比较大。
+  Lock 是由 JDK 提供，基于 AQS 框架实现的同步器：可重入的非公平锁，优点使用起来比较灵活，并且可以设置超时或响应中断请求。缺点和 synchronized 相同，并且若没有正确释放资源容易造成死锁。
 - Synchronized 锁的使用场景
   用于多线程并发同步，保障临界区操作的原子性，内存可见性。适用于并发竞争度高，临界区执行时间长的场景。
 - 你阅读过 Java 虚拟机偏向锁的源码，能否说明下偏向锁怎样一步步升级的？
+  虚拟机执行到 monitorenter 指令会 case 到相应代码块。
   检查对象的 Mark Word 是否为偏向模式，即后三个标志位为 101
   检查对象的偏向线程是否为当前线程，偏向锁为可重入锁
   检查偏向模式是否关闭，关闭则尝试撤销偏向锁
@@ -316,8 +382,9 @@ Synchronized在特定的情况下对于已经在等待的线程是后来的线�
   高并发下带来额外的 CPU 开销降低总体效率
   存在 ABA 的问题
 
-- 并发包下得其它工具都用过哪些？
 - 介绍一下 AQS 框架
+  AQS 作为抽象的队列式同步器，是其它同步器实现的基础框架。内部维护 state 和 FIFO 队列分别表示共享资源和获取资源失败的线程等待队列。当线程尝试获取资源失败后，由 AQS 负责维护线程的阻塞和唤醒。
+- 并发包下得其它工具都用过哪些？
 - 我们可以通过 Unsafe 可以做哪些事情？
 - Unsafe 我们怎么去获取？还有别的方式嘛？
 - Unsafe 跟内存管理相关的方法有哪些？
