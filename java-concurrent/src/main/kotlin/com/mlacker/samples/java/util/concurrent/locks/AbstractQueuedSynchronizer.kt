@@ -25,21 +25,74 @@ abstract class AbstractQueuedSynchronizer {
         return STATE.compareAndSet(this, expect, update)
     }
 
-    private fun enq(node: Node): Node {
-        while (true) {
-            val oldTail = tail
-            if (oldTail != null) {
-                node.setPrevRelaxed(oldTail)
-                if (compareAndSetTail(oldTail, node)) {
-                    oldTail.next = node
-                    return oldTail
-                }
-            } else {
-                initializeSyncQueue()
-            }
+    fun acquire(acquires: Int) {
+        if (!tryAcquire(acquires) &&
+            acquireQueued(addWaiter(Node.EXCLUSIVE), acquires)
+        ) selfInterrupt()
+    }
+
+    @Throws(InterruptedException::class)
+    fun acquireInterruptibly(acquires: Int) {
+        if (Thread.interrupted()) {
+            throw InterruptedException()
+        }
+        if (!tryAcquire(acquires)) {
+            doAcquireInterruptibly(acquires)
         }
     }
 
+    @Throws(InterruptedException::class)
+    fun tryAcquireNanos(acquires: Int, nanosTimeout: Long): Boolean {
+        if (Thread.interrupted()) {
+            throw InterruptedException()
+        }
+        return tryAcquire(acquires) ||
+                doAcquireNanos(acquires, nanosTimeout)
+    }
+
+    fun acquireShared(acquires: Int) {
+        if (tryAcquireShared(acquires) < 0) {
+            doAcquireShared(acquires)
+        }
+    }
+
+    fun release(acquires: Int): Boolean {
+        if (tryRelease(acquires)) {
+            doRelease()
+            return true
+        }
+        return false
+    }
+
+    fun releaseShared(acquires: Int): Boolean {
+        if (tryReleaseShared(acquires)) {
+            doReleaseShared()
+            return true
+        }
+        return false
+    }
+
+    protected open fun tryAcquire(acquires: Int): Boolean {
+        throw UnsupportedOperationException()
+    }
+
+    protected open fun tryRelease(releases: Int): Boolean {
+        throw UnsupportedOperationException()
+    }
+
+    protected open fun tryAcquireShared(acquires: Int): Int {
+        throw UnsupportedOperationException()
+    }
+
+    protected open fun tryReleaseShared(releases: Int): Boolean {
+        throw UnsupportedOperationException()
+    }
+
+    protected open fun isHeldExclusively(): Boolean {
+        throw UnsupportedOperationException()
+    }
+
+    // Creates and enqueues node for current thread and given mode.
     private fun addWaiter(mode: Node?): Node {
         val node = Node(mode)
 
@@ -57,130 +110,80 @@ abstract class AbstractQueuedSynchronizer {
         }
     }
 
+    private fun initializeSyncQueue() {
+        val h = Node()
+        if (HEAD.compareAndSet(this, null, h)) {
+            tail = h
+        }
+    }
+
+    /**
+     * Acquires in exclusive uninterruptible mode for thread already in queue.
+     * Used by condition wait methods as well as acquire.
+     * @return true if interrupted while waiting
+     */
+    private fun acquireQueued(node: Node, acquires: Int): Boolean {
+        var interrupted = false
+        try {
+            while (true) {
+                val p = node.predecessor()
+                // if head is released, unpark secondary node and try acquire
+                if (p == head && tryAcquire(acquires)) {
+                    setHead(node)
+                    p.next = null
+                    return interrupted
+                }
+                if (shouldParkAfterFailedAcquire(p, node))
+                    interrupted = interrupted || parkAndCheckInterrupt()
+            }
+        } catch (t: Throwable) {
+            cancelAcquire(node)
+            if (interrupted)
+                selfInterrupt()
+            throw t
+        }
+    }
+
     private fun setHead(node: Node) {
         head = node
         node.thread = null
         node.prev = null
     }
 
-    // Wakes up node's successor, if one exists.
-    private fun unparkSuccessor(node: Node) {
-        val ws = node.waitStatus
-        if (ws < 0) {
-            node.compareAndSetWaitStatus(ws, 0)
+    /**
+     * Checks and updates status for a node that failed to acquire. Returns true if thread should block.
+     * This is main signal control in all acquire loops. Requires that pred == node.prev.
+     */
+    private fun shouldParkAfterFailedAcquire(predecessor: Node, node: Node): Boolean {
+        val ws = predecessor.waitStatus
+        if (ws == Node.SIGNAL) {
+            // This node has already set status asking a release
+            // to signal it, so it can safely park.
+            return true
         }
 
-        var s = node.next
-        if (s == null || s.waitStatus > 0) {
-            s = null
-
-            var p = tail
-            while (p != node && p != null) {
-                if (p.waitStatus <= 0) {
-                    s = p
-                }
-
-                p = p.prev
-            }
-        }
-
-        if (s != null) {
-            LockSupport.unpark(s.thread)
-        }
-    }
-
-    private fun doReleaseShared() {
-        while (true) {
-            val h = head
-            if (h != null && h != tail) {
-                val ws = h.waitStatus
-                if (ws == Node.SIGNAL) {
-                    if (!h.compareAndSetWaitStatus(Node.SIGNAL, 0)) {
-                        continue
-                    }
-                    unparkSuccessor(h)
-                } else if (ws == 0 && !h.compareAndSetWaitStatus(0, Node.PROPAGATE)) {
-                    continue
-                }
-            }
-            if (h == head) {
-                break
-            }
-        }
-    }
-
-    private fun setHeadAndPropagate(node: Node, propagate: Int) {
-        val h = head
-        setHead(node)
-
-        val h2 = head
-        if (propagate > 0 || h == null || h.waitStatus < 0 || h2 == null || h2.waitStatus < 0) {
-            val s = node.next
-            if (s == null || s.isShared()) {
-                doReleaseShared()
-            }
-        }
-    }
-
-    private fun cancelAcquire(node: Node) {
-        node.thread = null
-
-        var pred = node.prev!!
-        while (pred.waitStatus > 0) {
-            pred = pred.prev!!
-            node.prev = pred
-        }
-
-        val predNext = pred.next!!
-
-        node.waitStatus = Node.CANCELLED
-
-        if (node == tail && compareAndSetTail(node, pred)) {
-            pred.compareAndSetNext(predNext, null)
+        var pred = predecessor
+        if (ws > 0) {
+            // Predecessor was cancelled. Skip over predecessors and indicate retry
+            do {
+                pred = pred.prev!!
+                node.prev = pred
+            } while (pred.waitStatus > 0)
+            pred.next = node
         } else {
-            val ws = pred.waitStatus
-            if (pred != head &&
-                (ws == Node.SIGNAL || (ws <= 0 && pred.compareAndSetWaitStatus(ws, Node.SIGNAL))) &&
-                pred.thread != null
-            ) {
-                val next = node.next
-                if (next != null && next.waitStatus <= 0) {
-                    pred.compareAndSetNext(predNext, next)
-                }
-            } else {
-                unparkSuccessor(node)
-            }
-
-            node.next = node
+            /*
+             * waitStatus must be 0 or PROPAGATE. Indicate that we
+             * need a signal, but don't park yet. Caller will need to
+             * retry to make sure it cannot acquire before parking.
+             */
+            pred.compareAndSetWaitStatus(ws, Node.SIGNAL)
         }
+        return false
     }
 
     private fun parkAndCheckInterrupt(): Boolean {
         LockSupport.park(this)
         return Thread.interrupted()
-    }
-
-    internal fun acquireQueued(node: Node, acquires: Int): Boolean {
-        var interrupted = false
-        try {
-            while (true) {
-                val p = node.predecessor()
-                if (p == head && tryAcquire(acquires)) {
-                    setHead(node)
-                    p.next = null
-                    return interrupted
-                }
-                if (shouldParkAfterFailedAcquire(p, node)) {
-                    interrupted = interrupted || parkAndCheckInterrupt()
-                }
-            }
-        } catch (t: Throwable) {
-            cancelAcquire(node)
-            if (interrupted) {
-                selfInterrupt()
-            }
-            throw t
-        }
     }
 
     @Throws(InterruptedException::class)
@@ -267,74 +270,118 @@ abstract class AbstractQueuedSynchronizer {
         }
     }
 
-    protected open fun tryAcquire(acquires: Int): Boolean {
-        throw UnsupportedOperationException()
-    }
+    private fun setHeadAndPropagate(node: Node, propagate: Int) {
+        val h = head
+        setHead(node)
 
-    protected open fun tryRelease(releases: Int): Boolean {
-        throw UnsupportedOperationException()
-    }
-
-    protected open fun tryAcquireShared(acquires: Int): Int {
-        throw UnsupportedOperationException()
-    }
-
-    protected open fun tryReleaseShared(releases: Int): Boolean {
-        throw UnsupportedOperationException()
-    }
-
-    protected open fun isHeldExclusively(): Boolean {
-        throw UnsupportedOperationException()
-    }
-
-    fun acquire(acquires: Int) {
-        if (!tryAcquire(acquires) &&
-            acquireQueued(addWaiter(Node.EXCLUSIVE), acquires)
-        ) selfInterrupt()
-    }
-
-    @Throws(InterruptedException::class)
-    fun acquireInterruptibly(acquires: Int) {
-        if (Thread.interrupted()) {
-            throw InterruptedException()
-        }
-        if (!tryAcquire(acquires)) {
-            doAcquireInterruptibly(acquires)
-        }
-    }
-
-    @Throws(InterruptedException::class)
-    fun tryAcquireNanos(acquires: Int, nanosTimeout: Long): Boolean {
-        if (Thread.interrupted()) {
-            throw InterruptedException()
-        }
-        return tryAcquire(acquires) ||
-                doAcquireNanos(acquires, nanosTimeout)
-    }
-
-    fun release(acquires: Int): Boolean {
-        if (tryRelease(acquires)) {
-            val h = head
-            if (h != null && h.waitStatus != 0) {
-                unparkSuccessor(h)
+        /*
+         * Try to signal next queued node if:
+         *   Propagation was indicated by caller,
+         *     or was recorded (as h.waitStatus either before
+         *     or after setHead) by a previous operation
+         *     (note: this uses sign-check of waitStatus because
+         *      PROPAGATE status may transition to SIGNAL.)
+         *   and
+         *     The next node is waiting in shared mode,
+         *       or we don't know, because it appears null
+         */
+        val h2 = head
+        if (propagate > 0 || h == null || h.waitStatus < 0 || h2 == null || h2.waitStatus < 0) {
+            val s = node.next
+            if (s == null || s.isShared()) {
+                doReleaseShared()
             }
-            return true
-        }
-        return false
-    }
-
-    fun acquireShared(acquires: Int) {
-        if (tryAcquireShared(acquires) < 0) {
-            doAcquireShared(acquires)
         }
     }
 
-    fun releaseShared(acquires: Int): Boolean {
-        if (tryReleaseShared(acquires)) {
-            doReleaseShared()
-            return true
+    private fun doRelease() {
+        val h = head
+        if (h != null && h.waitStatus != 0) {
+            unparkSuccessor(h)
         }
-        return false
+    }
+
+    private fun doReleaseShared() {
+        while (true) {
+            val h = head
+            if (h != null && h != tail) {
+                val ws = h.waitStatus
+                if (ws == Node.SIGNAL) {
+                    if (!h.compareAndSetWaitStatus(Node.SIGNAL, 0)) {
+                        continue
+                    }
+                    unparkSuccessor(h)
+                } else if (ws == 0 && !h.compareAndSetWaitStatus(0, Node.PROPAGATE)) {
+                    continue
+                }
+            }
+            if (h == head) {
+                break
+            }
+        }
+    }
+
+    // Wakes up node's successor, if one exists.
+    private fun unparkSuccessor(node: Node) {
+        val ws = node.waitStatus
+        if (ws < 0) {
+            node.compareAndSetWaitStatus(ws, 0)
+        }
+
+        var s = node.next
+        if (s == null || s.waitStatus > 0) {
+            s = null
+
+            var p = tail
+            while (p != node && p != null) {
+                if (p.waitStatus <= 0) {
+                    s = p
+                }
+
+                p = p.prev
+            }
+        }
+
+        if (s != null) {
+            LockSupport.unpark(s.thread)
+        }
+    }
+
+    private fun cancelAcquire(node: Node) {
+        node.thread = null
+
+        var pred = node.prev!!
+        while (pred.waitStatus > 0) {
+            pred = pred.prev!!
+            node.prev = pred
+        }
+
+        val predNext = pred.next!!
+
+        node.waitStatus = Node.CANCELLED
+
+        if (node == tail && compareAndSetTail(node, pred)) {
+            pred.compareAndSetNext(predNext, null)
+        } else {
+            val ws = pred.waitStatus
+            if (pred != head &&
+                (ws == Node.SIGNAL || (ws <= 0 && pred.compareAndSetWaitStatus(ws, Node.SIGNAL))) &&
+                pred.thread != null
+            ) {
+                val next = node.next
+                if (next != null && next.waitStatus <= 0) {
+                    pred.compareAndSetNext(predNext, next)
+                }
+            } else {
+                unparkSuccessor(node)
+            }
+
+            node.next = node
+        }
+    }
+
+    private fun compareAndSetTail(expect: Node, update: Node): Boolean {
+        return TAIL.compareAndSet(this, expect, update)
     }
 
     fun hasQueuedThreads(): Boolean {
@@ -360,16 +407,18 @@ abstract class AbstractQueuedSynchronizer {
         return false
     }
 
-    internal fun fullyRelease(node: Node): Int {
-        try {
-            val savedState = state
-            if (release(savedState)) {
-                return savedState
+    private fun enq(node: Node): Node {
+        while (true) {
+            val oldTail = tail
+            if (oldTail != null) {
+                node.setPrevRelaxed(oldTail)
+                if (compareAndSetTail(oldTail, node)) {
+                    oldTail.next = node
+                    return oldTail
+                }
+            } else {
+                initializeSyncQueue()
             }
-            throw IllegalMonitorStateException()
-        } catch (t: Throwable) {
-            node.waitStatus = Node.CANCELLED
-            throw t
         }
     }
 
@@ -392,15 +441,17 @@ abstract class AbstractQueuedSynchronizer {
         }
     }
 
-    private fun initializeSyncQueue() {
-        val h = Node()
-        if (HEAD.compareAndSet(this, null, h)) {
-            tail = h
+    internal fun fullyRelease(node: Node): Int {
+        try {
+            val savedState = state
+            if (release(savedState)) {
+                return savedState
+            }
+            throw IllegalMonitorStateException()
+        } catch (t: Throwable) {
+            node.waitStatus = Node.CANCELLED
+            throw t
         }
-    }
-
-    private fun compareAndSetTail(expect: Node, update: Node): Boolean {
-        return TAIL.compareAndSet(this, expect, update)
     }
 
     protected fun apparentlyFirstQueuedIsExclusive(): Boolean {
@@ -422,27 +473,9 @@ abstract class AbstractQueuedSynchronizer {
 
         init {
             val lookup = MethodHandles.lookup()
-            STATE = lookup.findVarHandle(Node::class.java, "state", Int::class.java)
-            HEAD = lookup.findVarHandle(Node::class.java, "head", Node::class.java)
-            TAIL = lookup.findVarHandle(Node::class.java, "tail", Node::class.java)
-        }
-
-        private fun shouldParkAfterFailedAcquire(pred: Node, node: Node): Boolean {
-            val ws = pred.waitStatus
-            if (ws == Node.SIGNAL) {
-                return true
-            }
-            if (ws > 0) {
-                var _pred = pred
-                do {
-                    _pred = _pred.prev!!
-                    node.prev = _pred
-                } while (_pred.waitStatus > 0)
-                pred.next = node
-            } else {
-                pred.compareAndSetWaitStatus(ws, Node.SIGNAL)
-            }
-            return false
+            STATE = lookup.findVarHandle(AbstractQueuedSynchronizer::class.java, "state", Int::class.java)
+            HEAD = lookup.findVarHandle(AbstractQueuedSynchronizer::class.java, "head", Node::class.java)
+            TAIL = lookup.findVarHandle(AbstractQueuedSynchronizer::class.java, "tail", Node::class.java)
         }
 
         fun selfInterrupt() {
@@ -499,6 +532,11 @@ abstract class AbstractQueuedSynchronizer {
             val SHARED: Node = Node()
             val EXCLUSIVE: Node? = null
 
+            const val CANCELLED: Int = 1
+            const val SIGNAL: Int = -1
+            const val CONDITION: Int = -2
+            const val PROPAGATE: Int = -3
+
             private val NEXT: VarHandle
             private val PREV: VarHandle
             private val THREAD: VarHandle
@@ -511,11 +549,6 @@ abstract class AbstractQueuedSynchronizer {
                 THREAD = lookup.findVarHandle(Node::class.java, "thread", Thread::class.java)
                 WAITSTATUS = lookup.findVarHandle(Node::class.java, "waitStatus", Int::class.java)
             }
-
-            const val CANCELLED: Int = 1
-            const val SIGNAL: Int = -1
-            const val CONDITION: Int = -2
-            const val PROPAGATE: Int = -3
         }
     }
 
@@ -545,21 +578,21 @@ abstract class AbstractQueuedSynchronizer {
             return node
         }
 
-        private fun doSignal(first: Node) {
-            var _first: Node? = first
+        private fun doSignal(_first: Node) {
+            var first: Node? = _first
             do {
-                firstWaiter = _first!!.nextWaiter
+                firstWaiter = first!!.nextWaiter
                 if (firstWaiter == null) {
                     lastWaiter = null
                 }
-                _first.nextWaiter = null
+                first.nextWaiter = null
 
-                if (!transferForSignal(_first)) {
-                    _first = firstWaiter
+                if (!transferForSignal(first)) {
+                    first = firstWaiter
                 } else {
                     break
                 }
-            } while (_first != null)
+            } while (first != null)
         }
 
         private fun transferForSignal(node: Node): Boolean {
