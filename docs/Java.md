@@ -2,12 +2,35 @@
 
 ## 基础
 
+### final关键字
+如果一个实例的字段被声明为final，则JVM会在初始化final变量后插入一个 sfence。
+
+类的final字段在<clinit>()方法中初始化，其可见性由JVM的类加载过程保证。
+
+final字段的初始化在<init>()方法中完成。sfence禁用了sfence前后对store的重排序，且保证final字段初始化之前（include）的内存更新都是可见的。
+
 ### 引用
 
 - 强引用：如果对象具有强引用，不会被 GC 回收
 - 软引用：内存不足时被 GC 回收
 - 弱引用：发生 GC 即回收
 - 虚引用：发生 GC 时放入引用队列中
+
+## Unsafe
+
+Unsafe 提供执行底层，不安全的一系列操作。包括：
+
+- 内存的分配、释放、拷贝、交换
+- park / unpark 操作，阻塞当前线程
+- CAS 操作，该操作含有 volatile 的 read and write 内存语义
+- loadFence, 确保 loads 先于 fence 之后的 loads and stores 不会被重排序，LoadLoad + LoadStore 屏障
+- storeFence, 确保 loads and stores 先于 fence 之后的 stores 不会被重排序，StoreStore + LoadStore 屏障
+- fullFence, 确保 loads and stores 先于 fence 之后的 loads and stores，隐式效果为同时使用 loadFence, storeFence 和 StoreLoad 屏障
+- 获取字段相对对象地址的偏移量
+- 类加载，分配类实例对象
+- 访问或修改对象的数据
+- 获取/存储值到指定对象的偏移量中，该操作含有 volatile 的 load / write 内存语义
+- 大小端机的二进制操作
 
 ## 集合
 
