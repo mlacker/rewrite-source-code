@@ -1,3 +1,4 @@
+@file:Suppress("JAVA_MODULE_DOES_NOT_EXPORT_PACKAGE")
 package com.mlacker.samples.java.util.concurrent.atomic
 
 import jdk.internal.misc.Unsafe
