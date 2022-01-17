@@ -1,11 +1,10 @@
-package com.mlacker.samples.concurrent
+package com.mlacker.samples.tests
 
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import java.util.*
-import java.util.concurrent.Callable
 import java.util.concurrent.CountDownLatch
-import java.util.concurrent.Executors
+import java.util.concurrent.atomic.LongAdder
 import java.util.concurrent.locks.Lock
 import java.util.concurrent.locks.ReentrantLock
 
@@ -67,33 +66,40 @@ class SynchronizeContainerTest {
 
     @Test
     fun `container test`() {
-        val executor = Executors.newCachedThreadPool()
         val container: Container<Int> = SynchronizeContainer(10)
-        val countDownLatch = CountDownLatch(2)
+        val countDownLatch: CountDownLatch
 
-        val producers = listOf(
-            0 until 100,
-            100 until 200
-        ).map { range ->
-            executor.submit {
-                for (i in range) {
-                    container.put(i)
-                }
-                countDownLatch.countDown()
+        val producers = listOf(1..100, 101..200)
+            .also {
+                countDownLatch = CountDownLatch(it.size)
             }
-        }
-        var sum = 0
-        val consumers = (1..10).map {
-            executor.submit {
-                while (true) {
-                    synchronized(sum) {
-                        sum += container.get()
+            .map { range ->
+                Thread {
+                    for (i in range) {
+                        container.put(i)
+                    }
+                    countDownLatch.countDown()
+                }
+            }
+            .onEach { it.start() }
+
+        val sum = LongAdder()
+        val consumers = (1..10)
+            .map {
+                Thread {
+                    try {
+                        while (true) {
+                            sum.add(container.get().toLong())
+                        }
+                    } catch (ex: InterruptedException) {
+                        Thread.interrupted()
                     }
                 }
             }
-        }
+            .onEach { it.start() }
+            .also { countDownLatch.await() }
+            .onEach { it.interrupt() }
 
-        countDownLatch.await()
-        assertEquals(200 * (200 + 1) / 2, sum)
+        assertEquals(200 * (200 + 1) / 2, sum.sum())
     }
 }

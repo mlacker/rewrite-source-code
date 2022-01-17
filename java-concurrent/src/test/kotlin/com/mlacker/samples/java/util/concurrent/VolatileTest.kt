@@ -1,8 +1,6 @@
-package com.mlacker.samples.concurrent
+package com.mlacker.samples.java.util.concurrent
 
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.fail
-import java.util.concurrent.Callable
 import java.util.concurrent.FutureTask
 import java.util.concurrent.TimeUnit
 
