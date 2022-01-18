@@ -435,46 +435,82 @@ AQS 使用 state 来表示共享资源，由同步器实现对共享资源的获
   存在 ABA 的问题
 
 - 并发包下得其它工具都用过哪些？
-  ReentrantLock, ReadWriteLock, Semaphore, CountDownLatch, Atomic, CopyOnWriteArrayList, LinkedBlockingQueue
+  ReentrantLock, ReadWriteLock, Semaphore, CountDownLatch, Atomic, CopyOnWriteArrayList, LinkedBlockingQueue, Executor
 - 介绍一下 AQS 框架
   AQS 作为抽象的队列式同步器，是许多同步器实现的基础框架，内部维护着 state 和双向双端链分别表示共享资源和获取资源失败的线程等待队列。
-  由子类实现**尝试获取/释放**的独占/共享资源的抽象方法，当线程尝试获取资源失败后，由 AQS 负责阻塞或唤醒，并且维护线程等待队列。
+  由子类实现**尝试获取/释放**的独占/共享资源的抽象方法，当线程尝试获取资源失败后，由 AQS 负责阻塞或唤醒当前线程，并且维护线程等待队列。
 - 读写锁的原理是什么？
-  内部分别实现了读锁和写锁，通过 Sync 控制独占/共享资源的获取和释放。state 的高16位和低16位分别表示独占资源和共享资源。尝试获取写锁时，如果资源被独占或共享或不等于当前线程，则获取失败。尝试获取读锁时，如果资源被独占则获取失败。
-  AQS 的共享锁和互斥锁
+  内部分别实现了读锁和写锁，通过 Sync 控制独占/共享资源的获取和释放。state 的高16位和低16位分别表示独占资源和共享资源。尝试获取写锁时，如果资源被独占且不等于当前线程或被共享，则获取失败。尝试获取读锁时，如果资源被独占则获取失败。
 - 我们可以通过 Unsafe 可以做哪些事情？
 - Unsafe 跟内存管理相关的方法有哪些？
-  内存的分配、释放、拷贝、交换，对象的分配，获取字段的偏移量，对不同内存语义的对象字段的访问和修改，CAS 操作，设置 load/store/full 栅栏，线程的 park/unpark，以及大小端机的内存操作
+  内存的分配、释放、拷贝、交换，类加载，对象的分配，获取字段的偏移量，对不同内存语义的对象字段的访问和修改，CAS 操作，设置 load/store/full 栅栏，线程的 park/unpark，以及大小端机的内存操作
 - Unsafe 我们怎么去获取？还有别的方式嘛？
   通过 Unsafe.getUnsafe()，或使用反射获取。
 - Java Lock 接口的实现原理？
 - Atomic 的源码也看过吧？AtomicInteger 的默认值怎么来的？ValueObject 的值是怎么来的？
-  默认值通过构造函数赋值，初始值为 0
+  默认值通过构造函数赋值，初始值为 0。通过 Unsafe 获取 value 的偏移量，实现 CAS 操作。
 - ConcurrentHashMap 底层实现原理能说一下嘛？
+  ConcurrentHashMap 是 HashMap 的并发实现，结合 volatile, spin cas, synchronized 实现的线程安全。
 - 有看过内部的源代码嘛？能简单说一下 put 操作的流程
+  先判断元素表是否为空，为空则初始化
+  然后计算 key 的 hash，并获取桶的索引，并获取桶
+  如果桶为空，则通过 cas 操作更新指定索引的桶
+  否则对桶加锁，追加链表元素并记录长度，或追加到红黑树中。
+  更新后判断链表长度，如果大于阈值则转换为红黑树
+  最后增加实际元素数量，如果超过容量则进行扩容。
+- HashMap 存在什么线程安全的问题？
+  当两个线程并发访问相同 hash 桶，即在链表追加元素时，会造成元素丢失的问题
+  当扩容时，如果并发操作容易形成一个环形链表，导致死循环。
 - ConcurrentHashMap 和 SynchronizedHashMap 有什么区别？分别用于什么场景
+  ConcurrentHashMap 是使用了多种优化手段的并发容器。而 SynchronizedMap 封装了 HashMap 并且加了同步锁。都适用于并发场景，前者性能优于后者。
 - ConcurrentHashMap 在 1.8 前后的实现区别？
+  1.7 之前 ConcurrentHashMap 采用分段锁优化机制，Segment 继承 ReentrantLock 提供并发安全的访问，分为 16个段降低并发冲突。
+  1.7 取消了 segments 字段，采用了 `volatile HashEntry<K, V>[] table` 保存数据，使用 synchroinzed(f) 对每个元素加锁，进一步减少并发冲突的概率。
+  1.8 加入了红黑树优化当链表元素过长时访问比较慢的问题。
 - ConcurrentHashMap 底层用的分段锁是哪个版本？之后使用的什么方式？
+  1.7 之前，之后用 synchronized + cas 保障线程安全
+- CopyOnWriteArrayList、ConcurrentHashMap 在底层是怎样保障线程安全的？
+  CopyOnWriteArrayList 利用写时复制技术解决并发访问冲突。当修改元素时，clone 原数组进行操作，操作完毕后更新数组引用。
+- 说一下并发容器，像 ConncurrentHashMap，CopyOnWriteArrayList 在什么场景下使用呢？（说的还不错，好的表达）
+  ConcurrentHashMap 适用于并发访问 Map 数据结构的对象，
+  CopyOnWriteArrayList 适用于并发访问数组，因其读不加锁，读写不冲突，适用于读多写少的场景，缺点是会存在读写不一致的情况。
 - CopyOnWriteArrayList 有什么缺点？
   读写不一致，读到的不一定时最新的值
   写多的场景下会频繁创建垃圾对象
-- CopyOnWriteArrayList、ConcurrentHashMap 在底层是怎样保障线程安全的？
-- 说一下并发容器，像 ConncurrentHashMap，CopyOnWriteArrayList 在什么场景下使用呢？（说的还不错，好的表达）
 - 除了以上两种方式外还有没有其它的保障线程安全的方式？
 
 - 有没有遇到过死锁的问题？怎么排查或解决的？
-- 什么情况下会导致死锁的场景？***（除了循环依赖还有别的吗？）
-- T：循环依赖是一种，另一种是不设超时无法释放的资源
+  通过 jstack 查看当前所有线程的状态，持有的锁，以及代码堆栈。
+- 什么情况下会导致死锁的场景？除了循环依赖还有别的吗？
+  锁未释放
+  进入等待状态后未唤醒
+  互相锁定资源并且等待资源
+  死循环
 - 有什么解决方案嘛？（除了同时申请资源的方式还有其它么，超时）
-- T：设置占用超时时间，有序获取锁，死锁检测释放，减小锁的粒度（尽快释放减少占用时间）- 而非扩大（合并锁）？
-
+  使用 synchronized 或 try-final 确保锁正确释放，或加入超时避免死锁
+  实现死锁检测，并通过中断唤醒线程
+  互相锁定资源并等待：
+  - 获取所有锁后再执行代码
+  - 按相同的顺序获取锁
+  - 合并锁
+  - 减少锁的粒度（占用时间）
 - 在 JVM 中有什么方式提升加锁的效率？
+  偏向锁、轻量级锁、自适应自旋锁
 - 分布式锁了解吗？
 - 有用过分布式锁么，怎么实现的嘛
 - 有没有了解过其它开源框架提供的锁？（Redisson，zk）
+  RedLock
 - zk 的锁有尝试过吗？
 - zk 的节点有哪些类型？
 - ConcurrentHashMap 如果要放入 100个对象，初始化的容量应该指定多大？（128 是错误的答案）
+  指定初始容量：100 / 0.75 + 1 = 134.33 < 256
+  指定初始对象：100 + (100 >>> 1) + 1 = 151 < 256
 - 针对线程池大小有做过具体的优化吗？
-- 如果让你做内存计数器，会用哪种锁？例如 metric 统计每个 URL 的 RT
+  如果请求频繁则调整合适的核型线程数量，避免频繁创建/销毁线程。
+  如果请求频率低且并发量较少可以减低核型线程，节约资源。
+  如果任务属于 CPU 密集性运算，则根据 CPU 核心数量设置最大线程量。
+  如果任务属于 IO 密集型运算，可是适当提高最大线程，充分利用 CPU 减低时间。
 - 多线程中如何实现一个计数器？
+  如果只有一个线程负责维护计数器可以使用 volatile 修饰
+  如果并发较低使用 AtomicLong 原子更新实现，如果并发较高使用 LongAdder 分段锁优化实现。
+- 如果让你做内存计数器，会用哪种锁？例如 metric 统计每个 URL 的 RT

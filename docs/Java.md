@@ -3,11 +3,12 @@
 ## 基础
 
 ### final关键字
+
 如果一个实例的字段被声明为final，则JVM会在初始化final变量后插入一个 sfence。
 
-类的final字段在<clinit>()方法中初始化，其可见性由JVM的类加载过程保证。
+类的final字段在`<clinit>()`方法中初始化，其可见性由JVM的类加载过程保证。
 
-final字段的初始化在<init>()方法中完成。sfence禁用了sfence前后对store的重排序，且保证final字段初始化之前（include）的内存更新都是可见的。
+final字段的初始化在`<init>()`方法中完成。sfence禁用了sfence前后对store的重排序，且保证final字段初始化之前（include）的内存更新都是可见的。
 
 ### 引用
 
@@ -94,6 +95,8 @@ public class ArrayList<E> extends AbstractList<E> implements List<E> {
 双向链表结构，写操作 O(1)，读操作 O(n)。
 
 ### HashMap
+
+HashMap 底层是基于数组 + 链表组成的，在 JDK 1.8 中如果链表长度超过 8，则会转换为红黑树。
 
 ```java
 // 默认初始容量：16，容量必须为 2的指数倍
