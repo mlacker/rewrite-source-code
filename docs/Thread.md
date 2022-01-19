@@ -283,7 +283,7 @@ Synchronized在特定的情况下对于已经在等待的线程是后来的线�
 - CountDownLatch
 - CyclicBarrier
 
-## 锁
+## 同步器
 
 ### AbstractQueuedSynchronizer
 
@@ -360,6 +360,51 @@ AQS 使用 state 来表示共享资源，由同步器实现对共享资源的获
 2. 设定一张资源分配表，记录各线程与占用资源之间的关系
 3. 设置一张线程等待表，记录各线程与要申请资源之间的关系
 4. 检索线程等代表和
+
+## 并发容器
+
+### ConcurrentHashMap
+
+#### JDK 1.6
+
+HashMap 在并发环境下最典型线程安全的问题是，在并发扩容进行 rehash 操作时，因为采用头插法的方式构建新链表，因此可能导致环行链表出现，当再次访问或修改 HashMap 时，会陷入死循环。
+
+ConcurrentHashMap 是允许**并发访问**的线程安全的 HashMap，其关键在于使用了锁分段技术，它通过将 hash table 拆分为 n 段（Segment），提供相互独立的锁提供并发访问的能力，默认的并发级别 n = 16。
+
+##### 定义
+
+```kotlin
+class ConcurrentHashMap<K, V>: AbstractMap<K, V>, ConcurrentMap<K, V> {
+
+    // 用于定位段的掩码
+    val segmentMask: Int
+    // 用于定位段的偏移量
+    val segmentShift: Int
+    // The segments, each of which is a specialized hash table
+    val segments: Array<Segment<K, V>>
+
+    class Segment<K, V>: ReentrantLock {
+
+        volatile var count: Int
+        volatile var modCount: Int
+        var threshold: Int
+        val loadFactor: Float
+        volatile var table: HashEntry<K, V>
+    }
+
+    class HashEntry<K, V>(
+      val key: K,
+      val hash: Int,
+      // 头插法, 不可变
+      val next: HashEntry<K, V>,
+      volatile var value: V
+    )
+}
+```
+
+### CopyOnWriteArrayList
+
+### BlockingQueue
 
 ## 实践、排查
 
@@ -460,7 +505,7 @@ AQS 使用 state 来表示共享资源，由同步器实现对共享资源的获
   最后增加实际元素数量，如果超过容量则进行扩容。
 - HashMap 存在什么线程安全的问题？
   当两个线程并发访问相同 hash 桶，即在链表追加元素时，会造成元素丢失的问题
-  当扩容时，如果并发操作容易形成一个环形链表，导致死循环。
+  当扩容并发 rehash 时，JDK 1.7 使用了头插法，因此容易形成一个环形链表，导致 get 时死循环。
 - ConcurrentHashMap 和 SynchronizedHashMap 有什么区别？分别用于什么场景
   ConcurrentHashMap 是使用了多种优化手段的并发容器。而 SynchronizedMap 封装了 HashMap 并且加了同步锁。都适用于并发场景，前者性能优于后者。
 - ConcurrentHashMap 在 1.8 前后的实现区别？
@@ -478,6 +523,7 @@ AQS 使用 state 来表示共享资源，由同步器实现对共享资源的获
   读写不一致，读到的不一定时最新的值
   写多的场景下会频繁创建垃圾对象
 - 除了以上两种方式外还有没有其它的保障线程安全的方式？
+  不可变对象、cas、lock、同步器、并发容器
 
 - 有没有遇到过死锁的问题？怎么排查或解决的？
   通过 jstack 查看当前所有线程的状态，持有的锁，以及代码堆栈。
