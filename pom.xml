@@ -21,6 +21,7 @@
         <module>spring-framework</module>
         <module>spring-cloud</module>
         <module>java-concurrent</module>
+        <module>samples</module>
     </modules>
 
     <dependencyManagement>
