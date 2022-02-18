@@ -1,10 +1,10 @@
 # rewrite-source-code
 
-此项目用于对 Spring Framework, Spring Cloud, Java Concurrent 等框架的研究和学习。
+此项目用于对 Spring Framework, Spring Cloud, Java 并发等框架的研究和学习。
 
 基于 Kotlin 语言良好的语意表达能力，实现相应框架核心功能的代码逻辑，并忽略一些与之无关的代码，以便于阅读和理解。
 
-眼过千遍，不如手过一遍
+实践重于学习
 
 ## TODO
 
@@ -30,16 +30,16 @@
 - [x] HashSet
 
 ### Java concurrent
-- [ ] AbstractQueueSynchronizer
-- [ ] Unsafe
+- [x] AbstractQueueSynchronizer
+- [x] Unsafe
 - [x] Synchronized (c++)
-- [ ] Lock
-- [ ] ReadWriteLock
-- [ ] Semaphore
+- [x] Lock
+- [x] ReadWriteLock
+- [x] Semaphore
 - [ ] BlockingQueue
-- [ ] ConcurrentMap
-- [ ] ExecutorService
-- [ ] ThreadPoolExecutor
+- [x] ConcurrentMap
+- [x] ExecutorService
+- [x] ThreadPoolExecutor
 
 
 ## Version
