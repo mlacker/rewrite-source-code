@@ -11,6 +11,22 @@ MySql 是插件式存储引擎，它是基于表的，而不是数据库。常�
   - 由 MYD 和 MYI 文件组成，分别存放数据文件和索引文件
 - 此外还有 NDB, Memory, Archive, Marai 等存储引擎
 
+### Join
+
+#### Nested-Loop Join Algorithm
+
+嵌套循环算法处理表连接。
+
+#### Block Nested-Loop Join Algorithm
+
+如果 Join 条件**没有使用索引**，就会采用 BNLJ，缓冲在外部循环中读取的行到 Join buffer 中，以减少必须读取内部循环的表的次数。
+
+#### Hash Join
+
+从 MySQL 8.0.18 开始，对任何查询都具有相等连接条件且**不使用索引**的查询使用哈希连接。
+
+EXPLAIN 查询计划中 Extra 列可以看到 Using join buffer (hash join)
+
 ## InnoDB
 
 InnoDB 是基于磁盘的存储引擎，而真正数据处理的过程是发生在内存中的，如果是处理写入或修改请求的话，还需要把内存中的内容刷新到磁盘上。所以 InnoDB 将数据划分为若干页，一次最少从磁盘中读取一页数据到内存中，或从内存刷新到磁盘上。
@@ -198,7 +214,30 @@ InnoDB使用异步IO操作磁盘，避免同步IO导致阻塞，也可以进行I
 
 ## Redo log
 
+记录事务执行后的状态，用来恢复未写入磁盘的数据（data file）的已成功事务更新的数据。
+
+顺序写入磁盘性能较快，用于故障后恢复。保障了事务的持久性。
+
+log buffer 刷入磁盘后，才提交事务。
+
 ## Undo log
+
+用于记录事务开始前的状态，用于事务失败时的回滚操作。
+
+用于实现 MVCC，保障了事务的原子性（回滚）。
+
+## Binlog
+
+用于**主从复制**，从库利用主库上的 binlog 进行重播。
+用于数据库的基于时间点的还原。
+
+#### redo log & binlog 二阶段提交
+
+通过两阶段提交过程来完成事务的一致性，理论上时先写 redo log，再写 binlog，两个日志都提交成功（刷入磁盘），事务才算真正的完成。
+
+redo log 刷入磁盘后，将回滚段置为 prepared 状态。
+
+innodb 释放锁，释放回滚段，设置 redo log 的提交状态，binlog 持久化到磁盘。
 
 ## MVCC
 
@@ -245,6 +284,12 @@ Read View 是事务进行快照读操作时产生的读视图，在该事务执�
 事务隔离级别 RC 和 RR 快照读的区别是，RC 的每次快照读操作都会生成一个 Read View，RR 是在第一次快照读时生成 Read View。
 
 在 RR 的隔离级别下，InnoDB 使用 MVCC 和 next-key locks 解决幻读，MVCC 解决的是**快照读**的幻读，next-key locks 解决的是当前读情况下的幻读。
+
+## lock
+
+### latch
+
+latch 一般为闩锁（轻量级锁），在 InnoDB 中 latch 又分为 mutex（互斥锁）和 rwlock（读写锁）。
 
 ## Partition
 
