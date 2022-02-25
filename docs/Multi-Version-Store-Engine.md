@@ -167,18 +167,18 @@ mysql> SELECT * FROM module_diff;
 ```JSON
 // version 1
 [
-    { foo: 'a' },
-    { foo: 'b' }
+    { "foo": "a" },
+    { "foo": "b" }
 ]
 // version 2
 [
-    { foo: 'c' }
+    { "foo": "c" }
 ]
 // merge 1, 2
 [
-    { foo: 'a' },
-    { foo: 'b' },
-    { foo: 'c' }
+    { "foo": "a" },
+    { "foo": "b" },
+    { "foo": "c" }
 ]
 ```
 
@@ -193,66 +193,60 @@ mysql> SELECT * FROM module_diff;
 ```json
 // 模块
 {
-    id: 1000,
-    name: 'ModuleA',
+    "id": 1000,
+    "name": "ModuleA",
     // 实体
-    entities: [
+    "entities": [
         {
-            id: 1100,
-            name: 'User',
-            properties: [
-                { id: 1101, name: 'Id', dataType: 'Integer', required: true },
-                { id: 1102, name: 'Name', dataType: 'Text' },
-                { id: 1103, name: 'Balance', dataType: 'Decimal' }
+            "id": 1100,
+            "name": "User",
+            "properties": [
+                { "id": 1101, "name": "Id", "dataType": "Integer", "required": true },
+                { "id": 1102, "name": "Name", "dataType": "Text" },
+                { "id": 1103, "name": "Balance", "dataType": "Decimal" }
             ]
         },
         {
-            id: 1200,
-            name: 'Order',
-            properties: [
-                { id: 1201, name: 'Id', dataType: 'Integer', required: true },
-                { id: 1202, name: 'Buyer', dataType: 'Integer' },
-                { id: 1203, name: 'Amount', dataType: 'Decimal' }
+            "id": 1200,
+            "name": "Order",
+            "properties": [
+                { "id": 1201, "name": "Id", "dataType": "Integer", "required": true },
+                { "id": 1202, "name": "Buyer", "dataType": "Integer" },
+                { "id": 1203, "name": "Amount", "dataType": "Decimal" }
             ]
         }
     ],
     // 操作（逻辑流）
-    actions: [
+    "actions": [
         {
-            id: 1300,
-            name: 'CreateOrder',
-            variables: [
-                { id: 1301, type: 'ParameterIn', name: 'User', 
-                    dataType:  { type: 'EntityType', entity: 1100 }
-                },
-                { id: 1302, type: 'ParameterIn', name: 'Price', dataType:  Decimal },
-                { id: 1303, type: 'LocalVariable', name: 'Order', 
-                    dataType:  { type: 'EntityType', entity: 1200 }
-                },
+            "id": 1300,
+            "name": "CreateOrder",
+            "variables": [
+                { "id": 1301, "type": "ParameterIn", "name": "User", "dataType": { "type": "EntityType", "entity": 1100 } },
+                { "id": 1302, "type": "ParameterIn", "name": "Price", "dataType": "Decimal" },
+                { "id": 1303, "type": "LocalVariable", "name": "Order", "dataType": { "type": "EntityType", "entity": 1200 }}
             ],
-            nodes: [
-                { id: 1304, type: 'Start' },
-                { id: 1305, type: 'Assign', 
-                    assignments: [ 
-                        'User.Balance = User.Balance - Price', 
-                        'Order.UserId = User.Id', 
-                        'Order.Amount = Price'
+            "nodes": [
+                { "id": 1304, "type": "Start" },
+                { "id": 1305, "type": "Assign",
+                    "assignments": [
+                        "User.Balance = User.Balance - Price",
+                        "Order.UserId = User.Id",
+                        "Order.Amount = Price"
                     ]
                 },
-                { id: 1306, type: 'RunServerAction', name: 'CreateOrder', source: 'Order' },
-                { id: 1307, type: 'End' }
+                { "id": 1306, "type": "RunServerAction", "name": "CreateOrder", "source": "Order" },
+                { "id": 1307, "type": "End" }
             ],
-            connectors: [
-                { id: 1308, source: 1304, target: 1305 },
-                { id: 1309, source: 1305, target: 1306 },
-                { id: 1310, source: 1306, target: 1307 },
+            "connectors": [
+                { "id": 1308, "source": 1304, "target": 1305 },
+                { "id": 1309, "source": 1305, "target": 1306 },
+                { "id": 1310, "source": 1306, "target": 1307 }
             ]
         }
     ],
     // 页面
-    pages: [
-        ...
-    ]
+    "pages": []
 }
 ```
 
