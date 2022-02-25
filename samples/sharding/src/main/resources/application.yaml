@@ -1,0 +1,30 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${redcat-pro.datasource.server}/${redcat-pro.datasource.schema}?characterEncoding=utf8&serverTimezone=GMT%2B8&allowMultiQueries=true&useSSL=false&useOldAliasMetadataBehavior=true
+    username: samples
+    password: p@ssword
+  shardingsphere:
+    datasource:
+      names: ds1, ds2
+      ds1:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        jdbc-url: jdbc:mysql://debian/sharding_db1?characterEncoding=utf8&serverTimezone=GMT%2B8&allowMultiQueries=true&useSSL=false
+        username: samples
+        password: p@ssword
+      ds2:
+        type: com.zaxxer.hikari.HikariDataSource
+        driver-class-name: com.mysql.cj.jdbc.Driver
+        jdbc-url: jdbc:mysql://debian/sharding_db2?characterEncoding=utf8&serverTimezone=GMT%2B8&allowMultiQueries=true&useSSL=false
+        username: samples
+        password: p@ssword
+    rules:
+      sharding:
+        tables:
+          order:
+            actual-data-nodes: sharding_db1.order_1, sharding_db1.order_2, sharding_db2.order_3, sharding_db2.order_4
+            database-strategy:
+              standard:
+                sharding-column: id
+                sharding-algorithm-name: MOD
