@@ -2,6 +2,15 @@
 
 ## 基础
 
+### String
+
+字符串为什么被定义为 final 类型
+
+1. 可以共享字符串常量池
+2. 数据安全
+3. 线程安全
+4. 高效 hashCode
+
 ### final关键字
 
 如果一个实例的字段被声明为final，则JVM会在初始化final变量后插入一个 sfence。
@@ -13,8 +22,8 @@ final字段的初始化在`<init>()`方法中完成。sfence禁用了sfence前�
 ### 引用
 
 - 强引用：如果对象具有强引用，不会被 GC 回收
-- 软引用：内存不足时被 GC 回收
 - 弱引用：发生 GC 即回收
+- 软引用：内存不足时被 GC 回收
 - 虚引用：发生 GC 时放入引用队列中
 
 ## Unsafe
@@ -29,7 +38,7 @@ Unsafe 提供执行底层，不安全的一系列操作。包括：
 - fullFence, 确保 loads and stores 先于 fence 之后的 loads and stores，隐式效果为同时使用 loadFence, storeFence 和 StoreLoad 屏障
 - 获取字段相对对象地址的偏移量
 - 类加载，分配类实例对象
-- 访问或修改对象的数据
+- 通过偏移量访问或修改对象的数据
 - 获取/存储值到指定对象的偏移量中，该操作含有 volatile 的 load / write 内存语义
 - 大小端机的二进制操作
 
@@ -39,7 +48,7 @@ Unsafe 提供执行底层，不安全的一系列操作。包括：
 
 读操作时间复杂度 O(1)，写操作 O(n)，适用于读多写少的随机访问场景。
 默认初始容量为 10，每次扩容 50%。
-迭代器分别为 `ArrayList<E>.Itr` 和 `ArrayList<E>.ListItr`
+迭代器分别为 `ArrayList<E>.Itr` 和 `ArrayList<E>.ListItr`（双向迭代）
 通过 modCount 变量保证并发下的 fail-fast 机制。
 
 ```java
@@ -139,6 +148,11 @@ int threshold = loadFactor * size
 缺点是会频繁分配内存，无法保证读写一致性。
 
 ### 动态代理
+
+静态代理在程序运行之前被代理类就需要存在
+动态代理的被代理类可以是在运行时生存的，通过 InvocationHandler 接口实现动态调用，Proxy 创建代理类的实例
+JDK 代理如果目标代理类没有实现的接口无法代理，则需要使用 CGLIB 动态代理
+CGLIB 通过 Enhancer 创建代理类实例，目标类作为父类
 
 #### JDK Proxy
 
