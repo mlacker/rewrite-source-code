@@ -16,6 +16,7 @@
         <module>kafka-producer</module>
         <module>kafka-consumer</module>
         <module>sharding</module>
+        <module>tests</module>
     </modules>
 
 </project>
