@@ -1,6 +1,5 @@
 package com.mlacker.samples.java.util.concurrent
 
-import com.mlacker.samples.java.lang.Runnable
 import java.util.concurrent.Future
 import java.util.concurrent.TimeUnit
 
