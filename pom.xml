@@ -21,6 +21,7 @@
     </properties>
 
     <modules>
+        <module>stdlib</module>
         <module>spring-framework</module>
         <module>spring-cloud</module>
         <module>java-concurrent</module>
