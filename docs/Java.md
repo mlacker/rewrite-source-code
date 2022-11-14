@@ -53,7 +53,8 @@ Unsafe 提供执行底层，不安全的一系列操作。包括：
 
 ### ArrayList
 
-读操作时间复杂度 O(1)，写操作 O(n)，适用于读多写少的随机访问场景。
+访问元素、修改元素、追加元素和移除最后一个元素的时间复杂度均是 O(1)，插入元素或移除元素的时间复杂度 O(n)，适用于随机访问、读多写少的场景。
+非线程安全，并发添加和移除元素会导致异常。
 默认初始容量为 10，每次扩容 50%。
 迭代器分别为 `ArrayList<E>.Itr` 和 `ArrayList<E>.ListItr`（双向迭代）
 通过 modCount 变量保证并发下的 fail-fast 机制。
@@ -110,6 +111,10 @@ public class ArrayList<E> extends AbstractList<E> implements List<E> {
 
 双向链表结构，写操作 O(1)，读操作 O(n)。
 
+可用于实现 Queue, Duque, Stack, LRU 队列。
+
+需要额外维护指针的开销，但不需要预分配空间，适用于修改频繁的场景。
+
 ### HashMap
 
 HashMap 底层是基于数组 + 链表组成的，在 JDK 1.8 中如果链表长度超过 8，则会转换为红黑树。
@@ -146,13 +151,17 @@ int threshold = loadFactor * size
 - 扩容为什么是翻两倍？
   计算元素索引位置是通过 & 运算符来执行取余运算的
 
+### LinkedHashMap
+
+### TreeHashMap
+
 ## 并发集合
 
 ### CopyOnWriteArrayList
 
-适用于读多写少的高并发场景，通过写时复制技术和 volatile 保障线程安全性。
+通过写时复制技术和 volatile 保障线程安全性，适用于读多写少的高并发场景。
 
-缺点是会频繁分配内存，无法保证读写一致性。
+频繁的修改数组对 GC 造成较大的压力，并发访问时无法保证读写一致性。
 
 ### 动态代理
 

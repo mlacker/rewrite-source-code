@@ -36,8 +36,10 @@ Blocking I/O
 
 ### Reactor
 
+响应式编程
+
 The reactor design pattern is an event handling pattern for handling service requests delivered concurrently to a service handler by one or more inputs. The service handler then demultiplexes the incoming requests and dispatches them synchronously to the associated request handlers.
 
 Reactor 设计模式是当一或多个输入源并发请求服务的事件处理模式，服务处理器将收到的请求分发到关联的处理器中。
 
-Proactor
+Proactor（命令式编程）
